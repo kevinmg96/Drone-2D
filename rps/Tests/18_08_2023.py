@@ -4,8 +4,10 @@ Sistema: 1 drone , multiples objetivos. dar servicio a dos usuarios en tierra.
 algoritmo de optimizacion: Q networks. campo de accion: discreto, discretizar angulos direccion, discretizar distancia maxima de desplazamiento.
 
 """
-import rps_local.environment.environment as environment
-
+import test.pruebita 
+from rps_local.environment.environment import env_print
+import test.pruebita 
+env_print()
 import rps.robotarium as robotarium
 from rps.utilities.transformations import *
 from rps.utilities.barrier_certificates import *

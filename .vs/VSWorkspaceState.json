@@ -1,10 +1,10 @@
 {
   "ExpandedNodes": [
     "",
-    "\\rps",
-    "\\rps\\examples",
-    "\\rps\\examples\\go_to_point"
+    "\\rps_local",
+    "\\rps_local\\environment",
+    "\\rps_local\\Tests"
   ],
-  "SelectedNode": "\\rps\\examples\\go_to_point\\si_go_to_point.py",
+  "SelectedNode": "\\rps_local\\environment\\environment.py",
   "PreviewInSolutionExplorer": false
 }
