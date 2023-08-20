@@ -12,8 +12,8 @@ from rps.robotarium_abc import *
 
 class Robotarium(RobotariumABC):
 
-        def __init__(self, number_of_robots=-1, show_figure=True, sim_in_real_time = True, initial_conditions=np.array([])):
-            super().__init__(number_of_robots, show_figure, sim_in_real_time, initial_conditions)
+        def __init__(self,boundaries, number_of_robots=-1, show_figure=True, sim_in_real_time = True, initial_conditions=np.array([])):
+            super().__init__(boundaries,number_of_robots, show_figure, sim_in_real_time, initial_conditions)
 
             #Initialize some rendering variables
             self.previous_render_time = time.time()
@@ -28,7 +28,7 @@ class Robotarium(RobotariumABC):
 
             #Initialize steps
             self._iterations = 0 
-
+        
         def get_poses(self):
             """Returns the states of the agents.
 

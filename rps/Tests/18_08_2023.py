@@ -4,10 +4,7 @@ Sistema: 1 drone , multiples objetivos. dar servicio a dos usuarios en tierra.
 algoritmo de optimizacion: Q networks. campo de accion: discreto, discretizar angulos direccion, discretizar distancia maxima de desplazamiento.
 
 """
-import test.pruebita 
-from rps_local.environment.environment import env_print
-import test.pruebita 
-env_print()
+import rps.Modules.environment as environment
 import rps.robotarium as robotarium
 from rps.utilities.transformations import *
 from rps.utilities.barrier_certificates import *
@@ -20,8 +17,12 @@ import time
 # Instantiate Robotarium object
 N = 5
 initial_conditions = np.array(np.mat('0.25 0.5 0.75 1 1.25; 0.2 0.5 0.75 1.0 1.25; 0 0 0 0 0'))
-r = robotarium.Robotarium(number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
+#r = robotarium.Robotarium(number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
+#dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
+boundaries = [0,0,3.2,2.0]
 
+r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
+bound = r.getAreaDimensions()
 # Define goal points by removing orientation from poses
 goal_points = generate_initial_conditions(N)
 

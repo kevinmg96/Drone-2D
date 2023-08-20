@@ -15,7 +15,7 @@ import rps.utilities.misc as misc
 
 class RobotariumABC(ABC):
 
-    def __init__(self, number_of_robots=-1, show_figure=True, sim_in_real_time=True, initial_conditions=np.array([])):
+    def __init__(self,boundaries, number_of_robots=-1, show_figure=True, sim_in_real_time=True, initial_conditions=np.array([])):
 
         #Check user input types
         assert isinstance(number_of_robots,int), "The number of robots used argument (number_of_robots) provided to create the Robotarium object must be an integer type. Recieved type %r." % type(number_of_robots).__name__
@@ -34,7 +34,7 @@ class RobotariumABC(ABC):
         self.initial_conditions = initial_conditions
 
         # Boundary stuff -> lower left point / width / height
-        self.boundaries = [-1.6, -1, 3.2, 2]
+        self.boundaries = boundaries#[-1.6, -1, 3.2, 2]
 
         self.file_path = None
         self.current_file_size = 0
