@@ -1,10 +1,9 @@
 {
   "ExpandedNodes": [
     "",
-    "\\rps_local",
-    "\\rps_local\\environment",
-    "\\rps_local\\Tests"
+    "\\rps",
+    "\\rps\\Tests"
   ],
-  "SelectedNode": "\\rps_local\\environment\\environment.py",
+  "SelectedNode": "\\rps\\Tests\\18_08_2023.py",
   "PreviewInSolutionExplorer": false
 }
