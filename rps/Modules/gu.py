@@ -18,22 +18,29 @@ class GroundUser:
         self.transmission_rate = -1
         self.is_gu_transmiting = False
 
-    def setTransmissionRate(self,max_gu_data,step_gu_data):
+    def setTransmissionRate(self,g_x,gu_trans_max,step_gu_data,bool_debug = False):
         """
         1.- variable para indicar que este gu desea tranmitir data
         2.- variable random para cambiar el estado del proceso. decidir si continuar mandando data o parar.
         3.- si trans data == -1, entonces setearemos la tranmission rate random, si no entonces agregaremos o decrementaremos
         una cantidad x al valor actual
+        actualizacion: seleccionar la tasa a comenzar a transmitir data dependera de la distribucion de probabilidad deseada
         """
-        self.is_gu_transmiting = misc.moveObjNextStep()
+        self.is_gu_transmiting = np.where(misc.poissonChoice(1.0) < 0.5,True,False)#misc.moveObjNextStep()
 
         if self.is_gu_transmiting: #gu quiere continuar o empezar a transmitir data
             if self.transmission_rate == -1: #gu no ha empezado a transmitir ninguna data
-                self.transmission_rate = np.random.random(size = (1,1))[0] * max_gu_data
+                self.transmission_rate = g_x 
             else: #data esta siendo transmitida, agregaremos o decremetnaremos valor por un step
-                self.transmission_rate + np.where(misc.moveObjNextStep(),1,-1) * step_gu_data
+                if misc.moveObjNextStep(): #actualizaremos data rate
+                    temp_rate = self.transmission_rate + np.where(misc.moveObjNextStep(),1,-1) * step_gu_data
+                    if not(temp_rate > gu_trans_max or temp_rate < 0.0):
+                        self.transmission_rate = temp_rate
         else: #gu quiere terminar de transmitir
             self.transmission_rate = -1
+
+        if bool_debug:
+            print("gu : {}, transmission status: {}, data rate: {}".format(self.id,self.is_gu_transmiting,self.transmission_rate))
 
 
 

@@ -4,14 +4,8 @@ import rps.robotarium as robotarium
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import rps.Modules.gu as gu
+import rps.Modules.mobileagent as mobileagent
 
-class graphGU:
-    def __init__(self) -> None:
-        """
-        esta clase contendra la informacion de las caracteristicas intrinsicas del GU (posicion, transmision data,etc.),
-        ademas 
-        """
-        pass
 
 class environment(robotarium.Robotarium):
     """
@@ -23,10 +17,49 @@ class environment(robotarium.Robotarium):
 
         #visualization GUs
         self.gu_patches = []
+        self.gu_tb_data = []
+        self.robots_rc_circles = []
+        
 
     def getAreaDimensions(self):
         #retornamos punto origen, width, height
         return self.boundaries
+    
+    def createDrones(self,**args):
+        """
+        funcion que permite crear el radio de conectividad de los drones, asi como el objeto con la data especifica del drone
+        """
+        obj_list_drones = []
+
+        for i in range(self.number_of_robots):
+            #create robot object
+            obj_list_drones.append(mobileagent.MobileAgent("Drone_" + str(i),args["Pose"][:,i]))
+
+            #create drone rc circle
+            if self.show_figure: #sim visual
+
+                center_rc = args["Pose"][:2,i]
+
+                self.robots_rc_circles.append(patches.Circle(center_rc,args["Rc"],fill = False,
+                facecolor = args["FaceColor"]))
+                self.axes.add_patch(self.robots_rc_circles[i])
+
+        if self.show_figure: #sim visual
+            plt.ion()
+            plt.show()
+
+        return obj_list_drones
+
+    
+    def updateGUDataRate(self,gu_index,trans_data_rate ):
+        """
+        actualizaremos valor del data rate en ambiente...
+        """
+        self.gu_tb_data[gu_index].set_text(str(np.round(trans_data_rate,2)))
+
+        self.figure.canvas.draw_idle()
+        self.figure.canvas.flush_events()
+
         
     def createGUs(self,**args):
         """
@@ -48,6 +81,12 @@ class environment(robotarium.Robotarium):
                 self.gu_patches.append(patches.Circle(obj_list_gus[i].pose[:2],args["Radius"],fill = True,
                 facecolor = args["FaceColor"][i]))
                 self.axes.add_patch(self.gu_patches[i])
+
+            #create data rate gu textbox
+                if args["PlotDataRate"]:
+                    self.gu_tb_data.append(self.axes.text(self.poses_gus[0,i],self.poses_gus[1,i],
+                                                          np.round(obj_list_gus[i].transmission_rate,2)))
+
 
         if self.show_figure: #sim visual
             plt.ion()

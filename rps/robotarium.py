@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from rps.robotarium_abc import *
 import rps.Modules.gu as gu
+import rps.Modules.mobileagent as mobileagent
 
 # Robotarium This object provides routines to interface with the Robotarium.
 #
@@ -66,7 +67,7 @@ class Robotarium(RobotariumABC):
 
             return
 
-        def step_v2(self,obj_list_gus,bool_robot = False):
+        def step_v2(self,obj_list_gus,obj_drone_list,bool_robot = False):
             """Increments the simulation by updating the dynamics.
             actualizacion fecha: 21/08/2023.
             esta funcion actualizara la pose de robots y gus
@@ -90,6 +91,9 @@ class Robotarium(RobotariumABC):
                 
                 # Ensure angles are wrapped
                 self.poses[2, :] = np.arctan2(np.sin(self.poses[2, :]), np.cos(self.poses[2, :]))
+
+                #update pose in obj drones
+                mobileagent.MobileAgent.set_drone_poses(obj_drone_list,self.poses)
             else:
                 # Update dynamics of agents gus
                 self.poses_gus[0, :] = self.poses_gus[0, :] + self.time_step*np.cos(self.poses_gus[2,:])*self.velocities_gus[0, :]
@@ -136,6 +140,9 @@ class Robotarium(RobotariumABC):
                         self.left_led_patches[i].center = self.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.poses[2,i]), np.sin(self.poses[2,i])))-\
                                         0.015*np.array((-np.sin(self.poses[2, i]), np.cos(self.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
                         # self.base_patches[i].center = self.poses[:2, i]
+
+                        #update center mobileagent rc
+                        self.robots_rc_circles[i].center = self.poses[:2, i]
                 else:
                     for i in range(self.poses_gus.shape[1]):
                         self.gu_patches[i].center = self.poses_gus[:2, i]

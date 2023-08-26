@@ -101,7 +101,7 @@ class RobotariumABC(ABC):
                 #lw = patches.RegularPolygon(self.poses[:2, i]+self.robot_radius*np.array((np.cos(self.poses[2, i]-math.pi/2), np.sin(self.poses[2, i]-math.pi/2)))+\
                 #                                0.035*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2))),\
                 #                                4, math.sqrt(2)*0.02, self.poses[2,i]+math.pi/4, facecolor='k')
-
+                
                 self.chassis_patches.append(p)
                 self.left_led_patches.append(lled)
                 self.right_led_patches.append(rled)
