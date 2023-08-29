@@ -35,8 +35,9 @@ class Radio:
             if delta < rc: #communication link between drone i and gu k
                 if gu.id in self.dict_gu:
                     self.dict_gu[gu.id]["Connection"] = True
+                    self.dict_gu[gu.id]["DataRate"] = gu.transmission_rate
                 else: #new object to be stored
-                    self.dict_gu[gu.id] = {"Connection" : True}
+                    self.dict_gu[gu.id] = {"Connection" : True, "DataRate" : gu.transmission_rate}
             else:
                 #gu k fuera de rango de drone i
                 if gu.id in self.dict_gu: #drone i cuenta con info previa de gu k

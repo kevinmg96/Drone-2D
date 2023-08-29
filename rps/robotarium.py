@@ -67,7 +67,7 @@ class Robotarium(RobotariumABC):
 
             return
 
-        def step_v2(self,obj_list_gus,obj_drone_list,bool_robot = False):
+        def step_v2(self,obj_list_gus,obj_drone_list,bool_robot = False,bool_debug = False):
             """Increments the simulation by updating the dynamics.
             actualizacion fecha: 21/08/2023.
             esta funcion actualizara la pose de robots y gus
@@ -146,6 +146,14 @@ class Robotarium(RobotariumABC):
                 else:
                     for i in range(self.poses_gus.shape[1]):
                         self.gu_patches[i].center = self.poses_gus[:2, i]
+
+                        #update center gu transmission rate textbox
+                        self.gu_tb_data[i].set_position(self.gu_patches[i].center)
+
+                        if bool_debug:
+                            print("gu index : {}, circle center: {}, textbox center: {}".format(i,self.gu_patches[i].center,
+                                                                self.gu_tb_data[i].get_position()))
+
 
                 self.figure.canvas.draw_idle()
                 self.figure.canvas.flush_events()

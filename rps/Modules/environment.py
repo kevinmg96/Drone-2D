@@ -19,6 +19,41 @@ class environment(robotarium.Robotarium):
         self.gu_patches = []
         self.gu_tb_data = []
         self.robots_rc_circles = []
+
+    def resetEnv(self):
+        """
+        resetereamos la posicion del robot inicial a una random.
+        asi como nuevas posiciones random de los GUs
+        """
+        self.reset_env = True
+        #random position robot...
+        self.generateVisualRobots()
+
+        #random position gus...
+
+
+    def isTerminalState(self,obj_drone_list, tolerance = 0.01):
+        """
+        esta funcion evaluara si el estado actual del ambiente es terminal.
+        por el momento el estado terminal sera si el drone navega fuera de los limites del espacio 2d
+        """
+        if np.abs(obj_drone_list[0].pose[0] - self.boundaries[2]) < tolerance or \
+        np.abs(obj_drone_list[0].pose[1] - self.boundaries[3]) < 0.01:
+            return True
+        return False
+
+
+
+    def getState(self,obj_drone_list,obj_gu_list):
+        """
+        esta funcion nos permitira obtener el estado global del sistema. 
+        (Pose drone, Pose GUs, isGUcovered, GU tranmission rate
+        """       
+
+        tuple_gu_pos = tuple((gu.pose for gu in obj_gu_list))
+        tuple_gu_dic = (obj_drone_list[0].dict_gu)
+        
+        return (obj_drone_list[0].pose, tuple_gu_pos, tuple_gu_dic)
         
 
     def getAreaDimensions(self):
@@ -56,7 +91,6 @@ class environment(robotarium.Robotarium):
         actualizaremos valor del data rate en ambiente...
         """
         self.gu_tb_data[gu_index].set_text(str(np.round(trans_data_rate,2)))
-
         self.figure.canvas.draw_idle()
         self.figure.canvas.flush_events()
 
@@ -86,7 +120,6 @@ class environment(robotarium.Robotarium):
                 if args["PlotDataRate"]:
                     self.gu_tb_data.append(self.axes.text(self.poses_gus[0,i],self.poses_gus[1,i],
                                                           np.round(obj_list_gus[i].transmission_rate,2)))
-
 
         if self.show_figure: #sim visual
             plt.ion()

@@ -16,6 +16,12 @@ class ProcesGuMobility:
         self.stop_mobility_event = Event()
         self.pause_mobility_event = Event()
 
+    def setStopProcess(self):
+        self.stop_mobility_event.set()
+
+    def clearStopProcess(self):
+        self.stop_mobility_event.clear()
+
     def pauseProcess(self,bool = False):
         if bool: #pause event
             self.pause_mobility_event.clear()
@@ -34,7 +40,7 @@ class ProcesGuMobility:
         #unpausing event
         self.pause_mobility_event.set()
 
-        while not self.stop_mobility_event.is_set():
+        while True:#not self.stop_mobility_event.is_set():
             #get goal points randomly for robots and gus
             
             if bool_debug:
@@ -83,6 +89,9 @@ class ProcesGuMobility:
 
             #pause event
             self.pause_mobility_event.wait()
+
+            if self.stop_mobility_event.is_set(): #stop event is activated, break loop
+                break
 
 
         

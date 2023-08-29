@@ -8,6 +8,7 @@ import rps.Modules.environment as environment
 import rps.Modules.gu as gu
 import rps.Modules.misc as misc
 import rps.Modules.Process as gu_process
+import rps.Modules.DQN as DQN
 import rps.robotarium as robotarium
 from rps.utilities.transformations import *
 from rps.utilities.barrier_certificates import *
@@ -21,6 +22,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import time
 import threading
+import itertools
 
 # Instantiate Robotarium object
 
@@ -34,8 +36,17 @@ boundaries = [0,0,3.2,2.0]
 rc = 0.35 #radio de comunicaciones en m
 rc_color = "k"
 drone_disp_range = [0,0.55] #rango de movimiento permitido del drone
-drone_angle_range = [0, 2 * np.pi] #rango de direcciones
+drone_disp_num  = 6#numero de divisiones en la accion displacement
 
+arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
+drone_angle_range = [0, 360] #rango de direcciones
+drone_angle_num = 4#numero de divisiones en la accion direction 
+
+arr_drone_angle_values = np.linspace(drone_angle_range[0],drone_angle_range[1],num = drone_angle_num, endpoint= False)
+
+#cartesian product (displacement, direction):
+cartesian_action = np.array(list(itertools.product(arr_drone_disp_values,arr_drone_angle_values)))
+encode_action = np.arange(cartesian_action.shape[0])
 
 r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
 
@@ -54,7 +65,7 @@ max_gu_data = 100.0 #bytes/s, kbytes/s
 step_gu_data = 10.0 
 
 list_gu_pose = [(gu_pos[0] + fac * i,gu_pos[1] + fac * i,0) for i in range(num_gus)]
-obj_list_gus = r.createGUs(Pose = list_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
+obj_gus_list = r.createGUs(Pose = list_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
                            PlotDataRate = True)
 
 
@@ -75,22 +86,56 @@ unicycle_position_controller = create_clf_unicycle_position_controller()
 # define x initially for robots 
 x_robots = r.get_poses()
 
-r.step_v2(obj_list_gus,obj_drone_list,True)
+r.step_v2(obj_gus_list,obj_drone_list,True)
 
 #creamos proceso movilidad y transmision de data gus
 obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
-process_mob_trans_gu = threading.Thread(target= obj_process_mob_trans_gu.guProcess, args=(r,obj_list_gus,obj_drone_list,
-max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False))
+#process_mob_trans_gu = threading.Thread(target= obj_process_mob_trans_gu.guProcess, args=(r,obj_gus_list,obj_drone_list,
+#max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False))
 
 #ejecutamos proceso gu
-process_mob_trans_gu.start()
+#process_mob_trans_gu.start()
+
+obj_process_mob_trans_gu.setStopProcess()
+
+
+obj_process_mob_trans_gu.guProcess(r,obj_gus_list,obj_drone_list,
+max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False)
+
+obj_drone_list[0].echoRadio(obj_gus_list,rc)
+
+tup = r.getState(obj_drone_list,obj_gus_list)
+
+capacity = 10
+experience_buffer = DQN.ReplayMemory(capacity)
+
+#primera ejecucion del proceso cambiar la posicion de drones...
+
+
+def trainAgent(num_episodes):
+    for i in range(num_episodes):
+        #reseteamos el ambiente, al inicio de cada episodio...
+        
+
+        # ejecutamos acciones de los gus...
+        obj_process_mob_trans_gu.guProcess(r,obj_gus_list,obj_drone_list,
+        max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False)
+
+        #actualizamos los registros del drone...
+        obj_drone_list[0].echoRadio(obj_gus_list,rc)
 
 
 
+    
 
 
+for _ in range(capacity):
+    rand_test = np.random.randint(0,9,size=(5))
+    #rand_transition = Transition(rand_test[0],rand_test[1],rand_test[2],rand_test[3],rand_test[4])
+    experience_buffer.push(rand_test[0],rand_test[1],rand_test[2],rand_test[3],rand_test[4])
 
+rt = experience_buffer.sample(5)
 
 while True:
     #get goal points randomly for robots and gus
@@ -120,7 +165,7 @@ while True:
         r.set_velocities(np.arange(N), dxu_robots,True)
 
         # Iterate the simulation
-        r.step_v2(obj_list_gus,obj_drone_list,True)
+        r.step_v2(obj_gus_list,obj_drone_list,True)
 
 #Call at end of script to print debug information and for your script to run on the Robotarium server properly
 r.call_at_scripts_end()
