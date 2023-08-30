@@ -77,20 +77,28 @@ class RobotariumABC(ABC):
         """
 
         # Visualization
-        self.figure = []
-        self.axes = []
+        #self.figure = []
+        #self.axes = []
         self.left_led_patches = []
         self.right_led_patches = []
         self.chassis_patches = []
         self.right_wheel_patches = []
         self.left_wheel_patches = []
         self.base_patches = []
-
+        self.robots_rc_circles = []
+        
+        #visualization GUs
+        self.gu_patches = []
+        self.gu_tb_data = []
+        
         
         if(self.show_figure):
             if self.reset_env:
-                self.axes
-                self.figure.clear()
+                #self.figure.clear()
+                self.axes.clear()
+                self.velocities = np.zeros((2, self.number_of_robots))
+                
+
             else:
                 self.figure, self.axes = plt.subplots()
                 #print("tipo objeto figure : {}".format(type(self.figure)))
@@ -133,6 +141,7 @@ class RobotariumABC(ABC):
                 self.axes.add_patch(lled)
                 self.axes.add_patch(rled)
                 # self.axes.add_patch(base)
+
 
             # Draw arena
             self.boundary_patch = self.axes.add_patch(patches.Rectangle(self.boundaries[:2], self.boundaries[2], self.boundaries[3], fill=False))

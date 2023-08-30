@@ -54,7 +54,7 @@ r = environment.environment(boundaries,number_of_robots=N, show_figure=True, ini
 obj_drone_list = r.createDrones(Pose = initial_conditions,Rc = rc,FaceColor = rc_color)
 
 #GU characteristics
-max_gu_dist = 0.25#m
+max_gu_dist = 0.5#m
 list_color_gus = ["r","b"]
 num_gus = 2
 
@@ -64,8 +64,13 @@ graph_rad = 0.12 #en metros, general para todos
 max_gu_data = 100.0 #bytes/s, kbytes/s
 step_gu_data = 10.0 
 
-list_gu_pose = [(gu_pos[0] + fac * i,gu_pos[1] + fac * i,0) for i in range(num_gus)]
-obj_gus_list = r.createGUs(Pose = list_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
+arr_gu_pose = np.random.random(size=(3,num_gus))
+arr_gu_pose[0,:] = arr_gu_pose[0,:] * boundaries[2]
+arr_gu_pose[1,:] = arr_gu_pose[1,:] * boundaries[3]
+arr_gu_pose[2,:] = arr_gu_pose[2,:] * 2 * np.pi
+
+
+obj_gus_list = r.createGUs(Pose = arr_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
                            PlotDataRate = True)
 
 
@@ -83,9 +88,8 @@ unicycle_position_controller = create_clf_unicycle_position_controller()
 # Create barrier certificates to avoid collision
 #uni_barrier_cert = create_unicycle_barrier_certificate()
 
-# define x initially for robots 
+#initialize position of robots...
 x_robots = r.get_poses()
-
 r.step_v2(obj_gus_list,obj_drone_list,True)
 
 #creamos proceso movilidad y transmision de data gus
@@ -97,9 +101,11 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 #ejecutamos proceso gu
 #process_mob_trans_gu.start()
 
+#primera ejecucion del proceso cambiar la posicion de drones...
+
 obj_process_mob_trans_gu.setStopProcess()
 
-
+"""
 obj_process_mob_trans_gu.guProcess(r,obj_gus_list,obj_drone_list,
 max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False)
 
@@ -107,15 +113,32 @@ obj_drone_list[0].echoRadio(obj_gus_list,rc)
 
 tup = r.getState(obj_drone_list,obj_gus_list)
 
-capacity = 10
-experience_buffer = DQN.ReplayMemory(capacity)
+#movemos al agente...
 
-#primera ejecucion del proceso cambiar la posicion de drones...
+while (np.size(at_pose(x_robots, goal_points_robots[:,0].reshape(-1,1), position_error = 0.05, rotation_error=100)) != N ):
 
+        # Get poses of agents
+        x_robots = r.get_poses()
+
+        # Create single-integrator control inputs for mobile agents and gus
+        dxu_robots = unicycle_position_controller(x_robots, goal_points_robots[:2,0].reshape(-1,1))
+
+
+        # Create safe control inputs (i.e., no collisions)
+        #dxu_robots = uni_barrier_cert(dxu_robots, x_robots)
+
+        # Set the velocities by mapping the single-integrator inputs to unciycle inputs
+        r.set_velocities(np.arange(N), dxu_robots,True)
+
+        # Iterate the simulation
+        r.step_v2(obj_gus_list,obj_drone_list,True)
+
+"""
 
 def trainAgent(num_episodes):
     for i in range(num_episodes):
         #reseteamos el ambiente, al inicio de cada episodio...
+        r.resetEnv(obj_drone_list,obj_gus_list,graph_rad,list_color_gus,rc,rc_color)
         
 
         # ejecutamos acciones de los gus...
@@ -125,17 +148,8 @@ def trainAgent(num_episodes):
         #actualizamos los registros del drone...
         obj_drone_list[0].echoRadio(obj_gus_list,rc)
 
-
-
-    
-
-
-for _ in range(capacity):
-    rand_test = np.random.randint(0,9,size=(5))
-    #rand_transition = Transition(rand_test[0],rand_test[1],rand_test[2],rand_test[3],rand_test[4])
-    experience_buffer.push(rand_test[0],rand_test[1],rand_test[2],rand_test[3],rand_test[4])
-
-rt = experience_buffer.sample(5)
+#training agent..
+trainAgent(2)
 
 while True:
     #get goal points randomly for robots and gus

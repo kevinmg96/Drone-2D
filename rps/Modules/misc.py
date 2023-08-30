@@ -20,7 +20,7 @@ def euclideanDistance(point_1,point_2):
 
 def poissonChoice(mag_max,mean = 3,samp_size = 100000,bool_debug = False):
 
-    samp_size = 10000
+
     sample = np.array(stats.poisson.rvs(mu = mean, size = samp_size))
     dic = {}
     for s in sample:
