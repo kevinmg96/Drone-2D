@@ -34,11 +34,11 @@ class environment(robotarium.Robotarium):
         #update robot poses in environment objects...
         self.poses = random_new_pos_robots
 
-        #create drones in new position..        
-        self.generateVisualRobots()
+        #update robot poses in mobileagent objects...
+        mobileagent.MobileAgent.set_drone_poses(obj_drone_list,self.poses)
 
-        self.createDrones(Drone = obj_drone_list,Pose = random_new_pos_robots, Rc = rc,
-                          FaceColor = rc_color)
+        #create drones in new position..        
+        self.generateVisualRobots(rc,rc_color)
 
         #initialize position robots...        
         self.step_v2(obj_gus_list,obj_drone_list,True)
@@ -88,44 +88,23 @@ class environment(robotarium.Robotarium):
         #retornamos punto origen, width, height
         return self.boundaries
     
-    def createDrones(self,**args):
+    def showDrones(self,**args):
         """
-        funcion que permite crear el radio de conectividad de los drones, asi como el objeto con la data especifica del drone
-        
-        Actualizacion Fecha: 29/08/2023-> modifique el codigo para que funcione con el reset environment
+        esta funcion permite generar los circulos que emulan el comportamiento rc de cada drone
         """
-        if not self.reset_env:
-            obj_list_drones = []
+        i = args["Index"]
+        center_rc = args["Pose"][:2,i]
 
+        self.robots_rc_circles.append(patches.Circle(center_rc,args["Rc"],fill = False,
+        facecolor = args["FaceColor"]))
+        self.axes.add_patch(self.robots_rc_circles[i])
+
+
+    def createDrones(self):
+        obj_list_drones = []
         for i in range(self.number_of_robots):
-            #create robot object
-            if self.reset_env:
-                drone_pose_curr = args["Pose"][:,i]
-                if len(drone_pose_curr.shape) == 1: #reshape
-                    drone_pose_curr =  drone_pose_curr.reshape(-1,1)                   
-                mobileagent.MobileAgent.set_drone_poses([args["Drone"][i],],drone_pose_curr)                
-            else:
-                obj_list_drones.append(mobileagent.MobileAgent("Drone_" + str(i),args["Pose"][:,i]))
-
-
-            #create drone rc circle
-            if self.show_figure: #sim visual
-
-                center_rc = args["Pose"][:2,i]
-
-                self.robots_rc_circles.append(patches.Circle(center_rc,args["Rc"],fill = False,
-                facecolor = args["FaceColor"]))
-                self.axes.add_patch(self.robots_rc_circles[i])
-
-
-
-        if self.show_figure: #sim visual
-            plt.ion()
-            plt.show()
-
-        if not self.reset_env:
-            return obj_list_drones
-
+            obj_list_drones.append(mobileagent.MobileAgent("Drone_" + str(i),self.poses[:,i]))
+        return obj_list_drones
     
     def updateGUDataRate(self,gu_index,trans_data_rate ):
         """

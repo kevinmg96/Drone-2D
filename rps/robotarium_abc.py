@@ -66,12 +66,12 @@ class RobotariumABC(ABC):
         self.right_led_commands = []
 
         self.reset_env = False
-        self.generateVisualRobots()
+
 
 
         
 
-    def generateVisualRobots(self):
+    def generateVisualRobots(self,rc = 1.0,rc_color = "k"):
         """
         esta funcion permitira iniciar o resetear el ambiente con los objetos que dan forma visual al robot
         """
@@ -96,8 +96,7 @@ class RobotariumABC(ABC):
             if self.reset_env:
                 #self.figure.clear()
                 self.axes.clear()
-                self.velocities = np.zeros((2, self.number_of_robots))
-                
+                self.velocities = np.zeros((2, self.number_of_robots))              
 
             else:
                 self.figure, self.axes = plt.subplots()
@@ -141,6 +140,9 @@ class RobotariumABC(ABC):
                 self.axes.add_patch(lled)
                 self.axes.add_patch(rled)
                 # self.axes.add_patch(base)
+
+                #generate the Rc circle for each robot...
+                self.showDrones(Index = i,Pose = self.poses[:, i],Rc = rc,FaceColor = rc_color)
 
 
             # Draw arena

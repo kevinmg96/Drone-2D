@@ -50,8 +50,10 @@ encode_action = np.arange(cartesian_action.shape[0])
 
 r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
 
+#create visual drones and effects...
+r.generateVisualRobots(rc,rc_color)
 #create mobile agent objs
-obj_drone_list = r.createDrones(Pose = initial_conditions,Rc = rc,FaceColor = rc_color)
+obj_drone_list = r.createDrones()
 
 #GU characteristics
 max_gu_dist = 0.5#m
