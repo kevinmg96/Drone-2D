@@ -15,8 +15,14 @@ class GroundUser:
     def __init__(self,id,pose):
         self.id = id
         self.pose = pose #vector : x,y,angle
-        self.transmission_rate = -1
+        self.transmission_rate = 0.0
         self.is_gu_transmiting = False
+
+    def setDistanceToDrone(self,drone_pose):
+        """
+        esta funcion seteara una variable del objeto, indicando la distancia qeu existe entre el gu i y drone
+        """
+        self.distance_to_drone = misc.euclideanDistance(self.pose[:2],drone_pose[:2])
 
     def setTransmissionRate(self,g_x,gu_trans_max,step_gu_data,bool_debug = False):
         """
@@ -54,9 +60,11 @@ class GroundUser:
         return arr_pose_gus
     
     @staticmethod
-    def set_gu_poses(obj_list_gus,arr_pose_gus):
+    def set_gu_poses(obj_list_gus,arr_pose_gus,obj_drone_list = None):
 
         for i,gu in enumerate(obj_list_gus):
             gu.pose = arr_pose_gus[:,i]
+            if not obj_drone_list == None: #update distance to drone...
+                obj_list_gus[i].setDistanceToDrone(obj_drone_list[0].pose)
 
         

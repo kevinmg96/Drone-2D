@@ -32,21 +32,28 @@ N = initial_conditions.shape[1]
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
 
-#Drone Characteristics
+#--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.35 #radio de comunicaciones en m
 rc_color = "k"
 drone_disp_range = [0,0.55] #rango de movimiento permitido del drone
-drone_disp_num  = 6#numero de divisiones en la accion displacement
+drone_disp_num  = 2#numero de divisiones en la accion displacement
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
-drone_angle_range = [0, 360] #rango de direcciones
-drone_angle_num = 4#numero de divisiones en la accion direction 
+drone_angle_range = [0, 2*np.pi] #rango de direcciones
+drone_angle_num = 2#numero de divisiones en la accion direction 
 
 arr_drone_angle_values = np.linspace(drone_angle_range[0],drone_angle_range[1],num = drone_angle_num, endpoint= False)
 
 #cartesian product (displacement, direction):
 cartesian_action = np.array(list(itertools.product(arr_drone_disp_values,arr_drone_angle_values)))
 encode_action = np.arange(cartesian_action.shape[0])
+
+#E-greedy policy
+prob_epsilon = 0.2
+prob_epsilon_decay = 0.999 #despues de ciertas iteraciones, reducimos el valor de la prob de exploracion
+number_epsilon_iter_decay = 200 #cada 200 episodios reducimos el valor de epsilon
+
+#--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 
 r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
 
@@ -55,7 +62,7 @@ r.generateVisualRobots(rc,rc_color)
 #create mobile agent objs
 obj_drone_list = r.createDrones()
 
-#GU characteristics
+#----------------------------------------------GU characteristics ---------------------------------------------------------------#
 max_gu_dist = 0.5#m
 list_color_gus = ["r","b"]
 num_gus = 2
@@ -71,13 +78,16 @@ arr_gu_pose[0,:] = arr_gu_pose[0,:] * boundaries[2]
 arr_gu_pose[1,:] = arr_gu_pose[1,:] * boundaries[3]
 arr_gu_pose[2,:] = arr_gu_pose[2,:] * 2 * np.pi
 
+#----------------------------------------------GU characteristics ---------------------------------------------------------------#
 
-obj_gus_list = r.createGUs(Pose = arr_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
-                           PlotDataRate = True)
+obj_gus_list = r.createGUs(PoseDrone = obj_drone_list[0].pose, Pose= arr_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
+                           PlotDataRate = True) 
 
+#----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
+state_dimension = 6
+gamma = 0.1
 
- 
-
+#----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
 # Define goal points by removing orientation from poses
 #inclui random goal points gus
@@ -136,22 +146,88 @@ while (np.size(at_pose(x_robots, goal_points_robots[:,0].reshape(-1,1), position
         r.step_v2(obj_gus_list,obj_drone_list,True)
 
 """
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,10000,gamma,prob_epsilon,100,100)
+def selectAction(dqn_agent,state):
+    """
+    esta funcion permite calcular la nueva accion a tomar por el agente, de acuerdo a la epsilon-greedy policy
+    """
+    if np.random.random() < prob_epsilon: # si rand num menor a epsilon ejecutamos accion greedy
+        return dqn_agent.action_space[np.random.choice(encode_action,size = 1)[0],:]
+    else:
+        # calculamos el valor q(state,action) utilizando main network
+        q_values =dqn_agent.q_network.predict(state) 
+        return dqn_agent.action_space[np.argmax(q_values),:]
 
-def trainAgent(num_episodes):
+memoryBuffer = DQN.ReplayMemory(100)
+
+
+def trainAgent(num_episodes,bool_debug = False):
     for i in range(num_episodes):
+        rewards_per_episode = []
+
+        if bool_debug:
+            print("Simulating episode {}".format(i))
+
         #reseteamos el ambiente, al inicio de cada episodio...
         r.resetEnv(obj_drone_list,obj_gus_list,graph_rad,list_color_gus,rc,rc_color)
-        
-
-        # ejecutamos acciones de los gus...
-        obj_process_mob_trans_gu.guProcess(r,obj_gus_list,obj_drone_list,
-        max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False)
 
         #actualizamos los registros del drone...
         obj_drone_list[0].echoRadio(obj_gus_list,rc)
 
+        #get initial state
+        current_state = r.getState(obj_drone_list,obj_gus_list,max_gu_data)
+        
+        is_next_state_terminal = False
+
+        while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
+            #seleccionamos accion para agente de acuerdo a e greedy strategy
+            action = selectAction(dqn_agent,current_state)
+
+            #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
+            next_state,reward,is_next_state_terminal = r.stepEnv(obj_drone_list,obj_gus_list,action,at_pose,unicycle_position_controller,
+                                                                 rc)
+            rewards_per_episode.append(reward)
+
+            #store the transition tuple...
+            if memoryBuffer.__len__() > memoryBuffer.__sizeof__(): #si superamos el maximo de espacio del deque,
+                #liberaremos el primer elemento de la coleccion.
+                memoryBuffer.drop_left()
+
+            memoryBuffer.push(current_state,action,reward,next_state,is_next_state_terminal)
+            
+            #train q_network...
+            if memoryBuffer.__len__() > dqn_agent.batch_size: #si tenemos el minimo de transiciones necesarias
+                #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
+                dqn_agent.trainNetwork()
+
+            if is_next_state_terminal: #if next state is terminal, then finish the training episode and restart the process...
+                #update exploration probability...
+                dqn_agent.update_exploration_probability()
+                break
+
+            current_state = next_state
+            
+            # ejecutamos acciones de los gus...
+            obj_process_mob_trans_gu.guProcess(r,obj_gus_list,obj_drone_list,
+            max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False)
+
+            #actualizamos los registros del drone...
+            obj_drone_list[0].echoRadio(obj_gus_list,rc)         
+
+            
+
+        print("Sum of rewards {}".format(np.sum(rewards_per_episode)))        
+        dqn_agent.sumRewardsEpisode.append(np.sum(rewards_per_episode))
+
+
+            
+
+            
+
+
+
 #training agent..
-trainAgent(2)
+trainAgent(5)
 
 while True:
     #get goal points randomly for robots and gus

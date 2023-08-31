@@ -35,7 +35,7 @@ class ProcesGuMobility:
 
         # define x initially for  gus
         x_gus = gu.GroundUser.get_gu_poses(obj_list_gus)
-        r.step_v2(obj_list_gus,obj_drone_list)
+        #r.step_v2(obj_list_gus,obj_drone_list)
 
         #unpausing event
         self.pause_mobility_event.set()

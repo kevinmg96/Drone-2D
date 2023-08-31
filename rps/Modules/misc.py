@@ -67,7 +67,7 @@ def moveObjNextStep():
     """
     return np.random.randint(0,2,1)[0].astype(bool)
 
-def computeNextPosition(next_mag,pos,bool_debug = False):
+def computeNextPosition(next_mag,pos,direction = 2 * np.pi, bool_debug = False):
     """
     calculamos la nueva posicion del robot o gu, ingresando el rango maximo a poder desplazarse.
     angulo permitido : 0 a 2 pi
@@ -77,7 +77,7 @@ def computeNextPosition(next_mag,pos,bool_debug = False):
         print("ingrese funcion")
 
     
-    rand_ang = np.random.random(size = (1,1))[0] * 2 * np.pi 
+    rand_ang = np.random.random(size = (1,1))[0] * direction
     if bool_debug:
         print("ang rand: {}".format(rand_ang))
 

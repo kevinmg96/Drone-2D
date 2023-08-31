@@ -42,6 +42,8 @@ class Radio:
                 #gu k fuera de rango de drone i
                 if gu.id in self.dict_gu: #drone i cuenta con info previa de gu k
                     self.dict_gu[gu.id]["Connection"] = False
+                else: #agregaremos el gu al dorne i aunque el drone no sea capaz de detectarlo (modelo centralizado)
+                    self.dict_gu[gu.id] = {"Connection" : False}
 
         if bool_debug:
             print("Drone: {}, gu dict: {}".format(self.id, self.dict_gu))

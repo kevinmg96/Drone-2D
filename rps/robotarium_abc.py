@@ -142,7 +142,7 @@ class RobotariumABC(ABC):
                 # self.axes.add_patch(base)
 
                 #generate the Rc circle for each robot...
-                self.showDrones(Index = i,Pose = self.poses[:, i],Rc = rc,FaceColor = rc_color)
+                self.showDrones(Index = i,Pose = self.poses,Rc = rc,FaceColor = rc_color)
 
 
             # Draw arena
