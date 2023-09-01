@@ -1,5 +1,7 @@
+---------------------------------------------- PENDIENTES -----------------------------------
 fecha: 31/08/2023
 
-falta definir la reward function.en modulo env, modificar la accionagent para que pueda retornar next_state,reward, is next state terminal
-me falta guardar la tupla transicion en el buffer.
+falta definir la reward function.en modulo env, modificar la accionagent para que pueda retornar next_state,reward, is next state terminal. listo
+me falta guardar la tupla transicion en el buffer. listo
 me falta agregar funcion entrenar red
+me falta agregar funciones para guardar los pesos de la red y de ir imprimiendo resultados

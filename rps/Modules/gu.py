@@ -43,7 +43,7 @@ class GroundUser:
                     if not(temp_rate > gu_trans_max or temp_rate < 0.0):
                         self.transmission_rate = temp_rate
         else: #gu quiere terminar de transmitir
-            self.transmission_rate = -1
+            self.transmission_rate = 0.0
 
         if bool_debug:
             print("gu : {}, transmission status: {}, data rate: {}".format(self.id,self.is_gu_transmiting,self.transmission_rate))
@@ -64,7 +64,7 @@ class GroundUser:
 
         for i,gu in enumerate(obj_list_gus):
             gu.pose = arr_pose_gus[:,i]
-            if not obj_drone_list == None: #update distance to drone...
-                obj_list_gus[i].setDistanceToDrone(obj_drone_list[0].pose)
+            #if not obj_drone_list == None: #update distance to drone...
+                #obj_list_gus[i].setDistanceToDrone(obj_drone_list[0].pose)
 
         

@@ -28,23 +28,44 @@ class Radio:
         """
         funcion que permite adquirir el estatus de la cobertura de los gus
         
+        Fecha actualizacion : 31/08/2023 -> el radio transmisor del drone tendra la capacidad de detectar las posiciones
+        de los gus desplegados (por el momento es centralizado el sistema)
         """
         for gu in obj_list_gus:
+
+
             delta = misc.euclideanDistance(self.pose[:2],gu.pose[:2])
 
+            if gu.id in self.dict_gu:
+                self.dict_gu[gu.id]["DataRate"] = gu.transmission_rate
+                self.dict_gu[gu.id]["Position"] = gu.pose[:2]
+                self.dict_gu[gu.id]["DistanceToDrone"] = delta
+            else:
+                self.dict_gu[gu.id] = {"DataRate" : gu.transmission_rate,
+                                           "Position" : gu.pose[:2], "DistanceToDrone" : delta }
+            
+            if delta < rc:
+                self.dict_gu[gu.id]["Connection"] = True
+            else:
+                self.dict_gu[gu.id]["Connection"] = False
+
+            """
             if delta < rc: #communication link between drone i and gu k
                 if gu.id in self.dict_gu:
                     self.dict_gu[gu.id]["Connection"] = True
                     self.dict_gu[gu.id]["DataRate"] = gu.transmission_rate
+                    self.dict_gu[gu.id]["Position"] = gu.pose[:2]
+                    self.dict_gu[gu.id]["DistanceToDrone"] = delta
                 else: #new object to be stored
-                    self.dict_gu[gu.id] = {"Connection" : True, "DataRate" : gu.transmission_rate}
+                    self.dict_gu[gu.id] = {"Connection" : True, "DataRate" : gu.transmission_rate,
+                                           "Position" : gu.pose[:2] }
             else:
                 #gu k fuera de rango de drone i
                 if gu.id in self.dict_gu: #drone i cuenta con info previa de gu k
                     self.dict_gu[gu.id]["Connection"] = False
                 else: #agregaremos el gu al dorne i aunque el drone no sea capaz de detectarlo (modelo centralizado)
                     self.dict_gu[gu.id] = {"Connection" : False}
-
+            """
         if bool_debug:
             print("Drone: {}, gu dict: {}".format(self.id, self.dict_gu))
 

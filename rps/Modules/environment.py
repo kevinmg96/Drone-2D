@@ -16,13 +16,13 @@ class environment(robotarium.Robotarium):
     def __init__(self,boundaries, number_of_robots=-1, show_figure=True, sim_in_real_time=True, initial_conditions=np.array([])):
         super().__init__(boundaries,number_of_robots, show_figure, sim_in_real_time, initial_conditions)
 
-    def stepEnv(self,obj_drone_list,obj_gus_list,action,pose_eval,unicycle_position_controller,rc):
+    def stepEnv(self,dq_agent,obj_drone_list,obj_gus_list,action,pose_eval,unicycle_position_controller,rc,max_gu_data):
         """
         esta funcion ejecutara la accion previamente seleccionada, es decir movera al drone a la accion deseada.
         retornaremos reward, nuevo estado, si es terminal.
         """
         #formato de accion: (magnitud,direccion) ->convertir en punto
-        drone_next_pos = misc.computeNextPosition(action[0],obj_drone_list[0].pose[:2],action[1])
+        drone_next_pos = misc.computeNextPosition(action[0],obj_drone_list[0].pose[:2],action[1],False)
 
 
         # Get poses of agents
@@ -48,7 +48,11 @@ class environment(robotarium.Robotarium):
         #actualizamos los registros del drone...
         obj_drone_list[0].echoRadio(obj_gus_list,rc)
 
-        return False,False,False
+        #return the transition tuple -> next_state,reward,is_next_state_terminal
+        reward = dq_agent.getReward(obj_drone_list,obj_gus_list)
+        next_state = self.getState(obj_drone_list,obj_gus_list,max_gu_data)
+        is_next_state_terminal = self.isTerminalState(obj_drone_list,obj_gus_list)
+        return next_state,reward,is_next_state_terminal
 
     def resetEnv(self,obj_drone_list,obj_gus_list,graph_rad,list_color_gus,rc,rc_color):
         """
@@ -107,9 +111,9 @@ class environment(robotarium.Robotarium):
         por el momento el estado terminal sera si el drone navega fuera de los limites del espacio 2d o
         algun gu navega fuera del ambiente
         """
-        for obj in range(obj_drone_list + obj_gu_list):
-            if np.abs(obj.pose[0] - self.boundaries[2]) < tolerance or \
-            np.abs(obj.pose[1] - self.boundaries[3]) < tolerance:
+        for obj in obj_drone_list + obj_gu_list:
+            if (obj.pose[0] > self.boundaries[2] or obj.pose[0] < self.boundaries[0]) or (obj.pose[1] > self.boundaries[3]  or
+                            obj.pose[1] < self.boundaries[1]):
                 return True
         return False
 
@@ -131,10 +135,10 @@ class environment(robotarium.Robotarium):
         normalizaremos los valores entre [0 y 1] para los valores de data rate
         """  
         env_state = np.zeros([1,6])
-        env_state[0,0] = obj_gu_list[0].distance_to_drone
+        env_state[0,0] = obj_drone_list[0].dict_gu["Gu_0"]["DistanceToDrone"]
         env_state[0,1] = obj_drone_list[0].dict_gu["Gu_0"]["Connection"]
         env_state[0,2] = np.interp(obj_gu_list[0].transmission_rate, [0,max_gu_data],[0, 1])
-        env_state[0,3] = obj_gu_list[1].distance_to_drone
+        env_state[0,3] = obj_drone_list[0].dict_gu["Gu_1"]["DistanceToDrone"]
         env_state[0,4] = obj_drone_list[0].dict_gu["Gu_1"]["Connection"]
         env_state[0,5] = np.interp(obj_gu_list[1].transmission_rate, [0,max_gu_data],[0, 1])
 
@@ -190,7 +194,7 @@ class environment(robotarium.Robotarium):
         for i in range(num_gus):
             obj_list_gus.append(gu.GroundUser("Gu_" + str(i),args["Pose"][:,i]))
             self.poses_gus[:,i] = args["Pose"][:,i]
-            obj_list_gus[i].setDistanceToDrone(args["PoseDrone"])
+            #obj_list_gus[i].setDistanceToDrone(args["PoseDrone"])
 
             self.showGUs(Index = i, Radius =  args["Radius"],FaceColor = args["FaceColor"],
                          PlotDataRate = args["PlotDataRate"] )

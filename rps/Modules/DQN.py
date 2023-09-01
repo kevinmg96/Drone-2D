@@ -57,8 +57,8 @@ class DQNAgent:
         self.batch_size = batch_size
         self.exploration_proba_decay = 0.005
 
-        #suma de las recompensas por episodio
-        self.sumRewardsEpisode = []
+        #mean de las recompensas por episodio
+        self.meanRewardsEpisode = []
 
         #create q network NN model
         self.q_network = self.createNetwork()
@@ -72,12 +72,15 @@ class DQNAgent:
         # predicted and true sample matrices in order to form the loss
         self.actionsAppend=[]
     
-    def getReward(self):
+    def getReward(self,obj_drone_list,obj_gu_list):
         """
         esta funcion implementara la ecuacion para obtener la recompensa por la accion ejecutada del drone.
         R = conec_1 * data_rate_1 + conec_2 * data_rate_2
         """
-        pass
+        conec_1 = float(obj_drone_list[0].dict_gu["Gu_0"]["Connection"])
+        conec_2 = float(obj_drone_list[0].dict_gu["Gu_1"]["Connection"])
+        trans_rate_tot = obj_gu_list[0].transmission_rate + obj_gu_list[1].transmission_rate + 1e-6
+        return conec_1 * (obj_gu_list[0].transmission_rate/trans_rate_tot) + conec_2 * (obj_gu_list[1].transmission_rate/trans_rate_tot)
 
     def update_exploration_probability(self,bool_debug = False):
         self.epsilon = self.epsilon * np.exp(-self.exploration_proba_decay)

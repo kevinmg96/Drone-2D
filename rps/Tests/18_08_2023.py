@@ -147,18 +147,8 @@ while (np.size(at_pose(x_robots, goal_points_robots[:,0].reshape(-1,1), position
 
 """
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,10000,gamma,prob_epsilon,100,100)
-def selectAction(dqn_agent,state):
-    """
-    esta funcion permite calcular la nueva accion a tomar por el agente, de acuerdo a la epsilon-greedy policy
-    """
-    if np.random.random() < prob_epsilon: # si rand num menor a epsilon ejecutamos accion greedy
-        return dqn_agent.action_space[np.random.choice(encode_action,size = 1)[0],:]
-    else:
-        # calculamos el valor q(state,action) utilizando main network
-        q_values =dqn_agent.q_network.predict(state) 
-        return dqn_agent.action_space[np.argmax(q_values),:]
 
-memoryBuffer = DQN.ReplayMemory(100)
+memoryBuffer = DQN.ReplayMemory(5)
 
 
 def trainAgent(num_episodes,bool_debug = False):
@@ -181,11 +171,11 @@ def trainAgent(num_episodes,bool_debug = False):
 
         while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
             #seleccionamos accion para agente de acuerdo a e greedy strategy
-            action = selectAction(dqn_agent,current_state)
+            action = dqn_agent.selectAction(current_state)
 
             #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-            next_state,reward,is_next_state_terminal = r.stepEnv(obj_drone_list,obj_gus_list,action,at_pose,unicycle_position_controller,
-                                                                 rc)
+            next_state,reward,is_next_state_terminal = r.stepEnv(dqn_agent,obj_drone_list,obj_gus_list,action,at_pose,
+            unicycle_position_controller,rc,max_gu_data)
             rewards_per_episode.append(reward)
 
             #store the transition tuple...
@@ -216,8 +206,8 @@ def trainAgent(num_episodes,bool_debug = False):
 
             
 
-        print("Sum of rewards {}".format(np.sum(rewards_per_episode)))        
-        dqn_agent.sumRewardsEpisode.append(np.sum(rewards_per_episode))
+        print("mean rewards {}".format(np.mean(rewards_per_episode)))        
+        dqn_agent.meanRewardsEpisode.append(np.mean(rewards_per_episode))
 
 
             
