@@ -11,6 +11,8 @@ from tensorflow import gather_nd
 from keras.losses import mean_squared_error
 import numpy as np
 
+from rps.utilities.misc import *
+
 Transition = namedtuple('Transition',
                         ('state', 'action','reward','next_state', "is_terminal"))
 
@@ -37,25 +39,33 @@ class ReplayMemory(object):
     def __getsize__(self):
         return self.memory.maxlen
 
-memory =ReplayMemory(100)
-t = Transition(10,15,20,30,40)
-memory.push(10,15,20,30,40)
-memory.push(20,15,20,30,40)
-print(memory.memory.maxlen)
-print(memory.__len__())
+def soft_update(target_model, primary_model, tau):
+    target_weights = target_model.get_weights()
+    primary_weights = primary_model.get_weights()
+    
+    updated_weights = []
+    for i in range(len(target_weights)):
+        updated_weights.append(tau * primary_weights[i] + (1 - tau) * target_weights[i])
+    
+    target_model.set_weights(updated_weights)
     
 class DQNAgent:
-    def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size ) -> None:
+    def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,timeslot_train_iter_max = 1000 ) -> None:
 
         self.state_dimension = state_dimension
         self.action_space = action_space
         self.memoryBuffer = ReplayMemory(mem_capacity)
+        self.counter_train_timeslot_max = 0 #este contador permitira salir del inner loop training, si el sistema no encuentra un 
+        #estado terminal
+        self.timeslot_train_iter_max = timeslot_train_iter_max
 
         self.gamma = gamma
         self.epsilon = epsilon
         self.num_episodes = num_episodes
         self.batch_size = batch_size
         self.exploration_proba_decay = 0.005
+        self.tau = 0.005 # soft update: este valor lentamente reducira los pesos del target network e ira acercando mas
+        #los pesos hacia los valores de q network
 
         #mean de las recompensas por episodio
         self.meanRewardsEpisode = []
@@ -72,16 +82,7 @@ class DQNAgent:
         # predicted and true sample matrices in order to form the loss
         self.actionsAppend=[]
     
-    def getReward(self,obj_drone_list,obj_gu_list):
-        """
-        esta funcion implementara la ecuacion para obtener la recompensa por la accion ejecutada del drone.
-        R = conec_1 * data_rate_1 + conec_2 * data_rate_2
-        """
-        conec_1 = float(obj_drone_list[0].dict_gu["Gu_0"]["Connection"])
-        conec_2 = float(obj_drone_list[0].dict_gu["Gu_1"]["Connection"])
-        trans_rate_tot = obj_gu_list[0].transmission_rate + obj_gu_list[1].transmission_rate + 1e-6
-        return conec_1 * (obj_gu_list[0].transmission_rate/trans_rate_tot) + conec_2 * (obj_gu_list[1].transmission_rate/trans_rate_tot)
-
+    
     def update_exploration_probability(self,bool_debug = False):
         self.epsilon = self.epsilon * np.exp(-self.exploration_proba_decay)
 
@@ -89,19 +90,23 @@ class DQNAgent:
             print(self.epsilon) 
 
     def my_loss_fn(self,y_true, y_pred):
-         
+        #y_true -> target q value network prediction on new_state max(q_target_network(next_state)) plus reward ->>> y_i
+        # y_pred -> prediction of the main q_network(input_network_data_set, output_network) -> q state action value
         s1,s2=y_true.shape
-        #print(s1,s2)
-         
+        #print("shape y_true : {}".format((s1,s2)))
+        #print("matrix y_true:{}".format(y_true))
+
+        s3,s4=y_pred.shape
+        #print("shape y_pred : {}".format((s3,s4)))
+        #print("matrix y_pred:{}".format(y_pred))
         # this matrix defines indices of a set of entries that we want to 
         # extract from y_true and y_pred
         # s2=2
         # s1=self.batchReplayBufferSize
-        indices=np.zeros(shape=(s1,s2))
+        indices=np.zeros(shape=(s1,2))
         indices[:,0]=np.arange(s1)
         indices[:,1]=self.actionsAppend
-         
-        # gather_nd and mean_squared_error are TensorFlow functions
+
         loss = mean_squared_error(gather_nd(y_true,indices=indices.astype(int)), gather_nd(y_pred,indices=indices.astype(int)))
         #print(loss)
         return loss 
@@ -122,92 +127,169 @@ class DQNAgent:
 
 
 
-    def trainingEpisodes():
+    def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,bool_debug = False,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
         #ejecutamos accion drone en simulador y obtenemos reward de accion , asi como nuevo estado
         # almacenamos transition en buffer
         #si el replay buffer ya tiene su capacidad maxima llena, entonces procedemos con el entrenamiento de la network
+        for i in range(self.num_episodes):
+            rewards_per_episode = []
 
-        pass
+            if bool_debug:
+                print("Simulating episode {}".format(i))
+
+            #reseteamos el ambiente, al inicio de cada episodio...
+
+           
+            env.resetEnv(obj_drone_list,obj_gus_list,args["GraphRadGu"],args["ListColorGu"],args["Rc"],args["RcDroneColor"])
+           
+            #actualizamos los registros del drone...
+            obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])
+
+            #get initial state
+            current_state = env.getState(obj_drone_list,obj_gus_list,args["MaxGuData"])
+            
+            is_next_state_terminal = False
+
+            while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
+                self.counter_train_timeslot_max += 1
+                if self.counter_train_timeslot_max >self.timeslot_train_iter_max: #salimos del inner loop. cambiamos a otro ep
+                    break
+                
+
+                #seleccionamos accion para agente de acuerdo a e greedy strategy
+                index_action, action = self.selectAction(current_state)
+
+                #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
+                next_state,reward,is_next_state_terminal = env.stepEnv(obj_drone_list,obj_gus_list,action,at_pose,
+                args["PositionController"],args["Rc"],args["MaxGuData"])
+                rewards_per_episode.append(reward)
+
+
+                #store the transition tuple...
+                self.memoryBuffer.push(current_state,(index_action, action),reward,next_state,is_next_state_terminal)
+                
+                #train q_network...
+                if self.memoryBuffer.__len__() > self.batch_size: #si tenemos el minimo de transiciones necesarias
+                    #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
+                    self.trainNetwork()
+
+                if is_next_state_terminal: #if next state is terminal, then finish the training episode and restart the process...
+                    #update exploration probability...
+                    self.update_exploration_probability()
+                    break
+
+                current_state = next_state
+                
+                # ejecutamos acciones de los gus...
+                obj_process_mob_trans_gu.guProcess(env,obj_gus_list,obj_drone_list,
+                args["MaxGuDist"], args["MaxGuData"],args["StepGuData"], args["PositionController"],at_pose,False)
+                #actualizamos los registros del drone...
+                obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])         
+
+            self.counter_train_timeslot_max = 0
+                
+            if bool_debug:
+                print("mean rewards : {},episode : {}".format(np.mean(rewards_per_episode), i))        
+            self.meanRewardsEpisode.append(np.mean(rewards_per_episode))
 
     def selectAction(self,state):
         """
         esta funcion permite calcular la nueva accion a tomar por el agente, de acuerdo a la epsilon-greedy policy
         """
         if np.random.random() < self.epsilon: # si rand num menor a epsilon ejecutamos accion greedy
-            return self.action_space[np.random.choice(np.arange(self.action_space.shape[0]),size = 1)[0],:]
+            index_action =np.random.choice(np.arange(self.action_space.shape[0]))
+            return index_action,self.action_space[index_action,:]
         else:
             # calculamos el valor q(state,action) utilizando main network
             q_values =self.q_network.predict(state) 
-            return self.action_space[np.argmax(q_values),:]
+            return np.argmax(q_values),self.action_space[np.argmax(q_values),:]
 
-    def trainNetwork(self):
+    def trainNetwork(self,bool_debug = False):             
  
-        # if the replay buffer has at least batch_size elements,
-        # then train the model 
-        # otherwise wait until the size of the elements exceeds batchReplayBufferSize
-        if (len(self.replayBuffer)>self.batchReplayBufferSize):
+        # sample a batch from the replay buffer
+        randomSampleBatch = self.memoryBuffer.sample(self.batch_size)
+            
+        # here we form current state batch 
+        # and next state batch
+        # they are used as inputs for prediction
+        currentStateBatch=np.zeros(shape=(self.batch_size,self.state_dimension))
+        nextStateBatch=np.zeros(shape=(self.batch_size,self.state_dimension))            
+        # this will enumerate the tuple entries of the randomSampleBatch
+        # index will loop through the number of tuples
+        for index,tupleS in enumerate(randomSampleBatch):
+            # first entry of the tuple is the current state
+            currentStateBatch[index,:]=tupleS[0]
+            # fourth entry of the tuple is the next state
+            nextStateBatch[index,:]=tupleS[3]
              
- 
-            # sample a batch from the replay buffer
-            randomSampleBatch=random.sample(self.replayBuffer, self.batchReplayBufferSize)
+        # here, use the target network to predict Q-values 
+        QnextStateTargetNetwork=self.target_network.predict(nextStateBatch)
+        # here, use the main network to predict Q-values 
+        QcurrentStateMainNetwork=self.q_network.predict(currentStateBatch)
              
-            # here we form current state batch 
-            # and next state batch
-            # they are used as inputs for prediction
-            currentStateBatch=np.zeros(shape=(self.batchReplayBufferSize,4))
-            nextStateBatch=np.zeros(shape=(self.batchReplayBufferSize,4))            
-            # this will enumerate the tuple entries of the randomSampleBatch
-            # index will loop through the number of tuples
-            for index,tupleS in enumerate(randomSampleBatch):
-                # first entry of the tuple is the current state
-                currentStateBatch[index,:]=tupleS[0]
-                # fourth entry of the tuple is the next state
-                nextStateBatch[index,:]=tupleS[3]
+        # now, we form batches for training
+        # input for training
+        inputNetwork=currentStateBatch
+        # output for training
+        outputNetwork=np.zeros(shape=(self.batch_size,self.action_space.shape[0]))
              
-            # here, use the target network to predict Q-values 
-            QnextStateTargetNetwork=self.targetNetwork.predict(nextStateBatch)
-            # here, use the main network to predict Q-values 
-            QcurrentStateMainNetwork=self.mainNetwork.predict(currentStateBatch)
-             
-            # now, we form batches for training
-            # input for training
-            inputNetwork=currentStateBatch
-            # output for training
-            outputNetwork=np.zeros(shape=(self.batchReplayBufferSize,2))
-             
-            # this list will contain the actions that are selected from the batch 
-            # this list is used in my_loss_fn to define the loss-function
-            self.actionsAppend=[]            
-            for index,(currentState,action,reward,nextState,terminated) in enumerate(randomSampleBatch):
+        # this list will contain the actions that are selected from the batch 
+        # this list is used in my_loss_fn to define the loss-function
+        self.actionsAppend=[]    
+      
+        for index,(currentState,action,reward,nextState,terminated) in enumerate(randomSampleBatch):
                  
-                # if the next state is the terminal state
-                if terminated:
-                    y=reward                  
-                # if the next state if not the terminal state    
-                else:
-                    y=reward+self.gamma*np.max(QnextStateTargetNetwork[index])
+            # if the next state is the terminal state
+            if terminated:
+                y=reward                  
+            # if the next state if not the terminal state    
+            else:
+                y=reward+self.gamma*np.max(QnextStateTargetNetwork[index])
                  
-                # this is necessary for defining the cost function
-                self.actionsAppend.append(action)
+            # this is necessary for defining the cost function index action
+            self.actionsAppend.append(action[0])
                  
-                # this actually does not matter since we do not use all the entries in the cost function
-                outputNetwork[index]=QcurrentStateMainNetwork[index]
-                # this is what matters
-                outputNetwork[index,action]=y
+            # this actually does not matter since we do not use all the entries in the cost function
+            outputNetwork[index]=QcurrentStateMainNetwork[index]
+            # this is what matters
+            outputNetwork[index,action[0]]=y
+        if bool_debug:
+            print("actionAppend : {}".format(self.actionsAppend))
+            print("input_network : {}".format(inputNetwork))
+            print("output network :{}".format(outputNetwork))
+            print("QcurrentStateMainNetwork :{}".format(QcurrentStateMainNetwork))
+
+        # here, we train the network
+        self.q_network.fit(inputNetwork,outputNetwork,batch_size = self.batch_size, verbose=0,epochs=100)  
+
+        #soft update of the target network parameters to get into the q network parameters  
+         # θ′ ← τ θ + (1 −τ )θ′ 
+        soft_update(self.target_network,self.q_network,self.tau)
+
              
-            # here, we train the network
-            self.mainNetwork.fit(inputNetwork,outputNetwork,batch_size = self.batchReplayBufferSize, verbose=0,epochs=100)     
-             
-            # after updateTargetNetworkPeriod training sessions, update the coefficients 
-            # of the target network
-            # increase the counter for training the target network
-            self.counterUpdateTargetNetwork+=1 
-            if (self.counterUpdateTargetNetwork>(self.updateTargetNetworkPeriod-1)):
-                # copy the weights to targetNetwork
-                self.targetNetwork.set_weights(self.mainNetwork.get_weights())        
-                print("Target network updated!")
-                print("Counter value {}".format(self.counterUpdateTargetNetwork))
-                # reset the counter
-                self.counterUpdateTargetNetwork=0
+       
+
+if __name__ == "__main__":
+    #testearemos lso argumentos de la clase DQN
+    state_dimension = 6
+    n_transitions = 100
+    action_space = np.random.randint(0,5,size=(4,2))
+    
+    #
+    batch_size = 10
+    agent = DQNAgent(state_dimension,action_space,n_transitions,0.1,0.6,100,batch_size)
+
+
+    for i in range(n_transitions):
+        current_state = np.random.random(size=(1,state_dimension))
+        index_action = np.random.choice(np.arange(action_space.shape[0]))
+        action = (index_action,action_space[index_action])
+        reward = np.random.random()
+        next_state = np.random.random(size=(1,state_dimension))
+        is_terminal = np.random.randint(0,2,dtype=bool)
+
+        agent.memoryBuffer.push(current_state,action,reward,next_state,is_terminal)
+
+    agent.trainNetwork()

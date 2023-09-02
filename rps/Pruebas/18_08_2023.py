@@ -146,9 +146,18 @@ while (np.size(at_pose(x_robots, goal_points_robots[:,0].reshape(-1,1), position
         r.step_v2(obj_gus_list,obj_drone_list,True)
 
 """
-dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,10000,gamma,prob_epsilon,100,100)
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,100,gamma,prob_epsilon,3,5)
+dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,bool_debug=True,
+                           GraphRadGu = graph_rad,                             
+                           ListColorGu = list_color_gus,                           
+                           Rc = rc,RcDroneColor = rc_color,MaxGuData = max_gu_data,StepGuData = step_gu_data,
+                           MaxGuDist = max_gu_dist,
+                            PositionController = unicycle_position_controller  )
 
+
+"""
 memoryBuffer = DQN.ReplayMemory(5)
+
 
 
 def trainAgent(num_episodes,bool_debug = False):
@@ -171,7 +180,7 @@ def trainAgent(num_episodes,bool_debug = False):
 
         while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
             #seleccionamos accion para agente de acuerdo a e greedy strategy
-            action = dqn_agent.selectAction(current_state)
+            index_action, action = dqn_agent.selectAction(current_state)
 
             #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
             next_state,reward,is_next_state_terminal = r.stepEnv(dqn_agent,obj_drone_list,obj_gus_list,action,at_pose,
@@ -179,11 +188,7 @@ def trainAgent(num_episodes,bool_debug = False):
             rewards_per_episode.append(reward)
 
             #store the transition tuple...
-            if memoryBuffer.__len__() > memoryBuffer.__sizeof__(): #si superamos el maximo de espacio del deque,
-                #liberaremos el primer elemento de la coleccion.
-                memoryBuffer.drop_left()
-
-            memoryBuffer.push(current_state,action,reward,next_state,is_next_state_terminal)
+            memoryBuffer.push(current_state,(index_action, action),reward,next_state,is_next_state_terminal)
             
             #train q_network...
             if memoryBuffer.__len__() > dqn_agent.batch_size: #si tenemos el minimo de transiciones necesarias
@@ -218,7 +223,7 @@ def trainAgent(num_episodes,bool_debug = False):
 
 #training agent..
 trainAgent(5)
-
+"""
 while True:
     #get goal points randomly for robots and gus
     #obj_process_mob_trans_gu.pauseProcess(True)

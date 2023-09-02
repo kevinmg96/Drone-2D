@@ -3,5 +3,7 @@ fecha: 31/08/2023
 
 falta definir la reward function.en modulo env, modificar la accionagent para que pueda retornar next_state,reward, is next state terminal. listo
 me falta guardar la tupla transicion en el buffer. listo
-me falta agregar funcion entrenar red
+me falta agregar funcion entrenar red y soft update target parameters. listo
+me falta seguir probando que el entrenamiento no marque errores
 me falta agregar funciones para guardar los pesos de la red y de ir imprimiendo resultados
+
