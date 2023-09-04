@@ -203,9 +203,9 @@ class environment(robotarium.Robotarium):
             obj_list_gus.append(gu.GroundUser("Gu_" + str(i),args["Pose"][:,i]))
             self.poses_gus[:,i] = args["Pose"][:,i]
             #obj_list_gus[i].setDistanceToDrone(args["PoseDrone"])
-
-            self.showGUs(Index = i, Radius =  args["Radius"],FaceColor = args["FaceColor"],
-                         PlotDataRate = args["PlotDataRate"] )
+            if self.show_figure:
+                self.showGUs(Index = i, Radius =  args["Radius"],FaceColor = args["FaceColor"],
+                            PlotDataRate = args["PlotDataRate"] )
 
         if self.show_figure: #sim visual
             plt.ion()
@@ -223,8 +223,9 @@ class environment(robotarium.Robotarium):
             #reseteamos data rates
             args["ObjGuList"][i].transmission_rate = 0.0
 
-            self.showGUs(Index = i, Radius =  args["Radius"],FaceColor = args["FaceColor"],
-                         PlotDataRate = args["PlotDataRate"] )
+            if self.show_figure:
+                self.showGUs(Index = i, Radius =  args["Radius"],FaceColor = args["FaceColor"],
+                            PlotDataRate = args["PlotDataRate"] )
 
         if self.show_figure: #sim visual
             plt.ion()

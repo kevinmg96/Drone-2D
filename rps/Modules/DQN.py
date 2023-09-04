@@ -5,13 +5,17 @@ from collections import namedtuple, deque
 import random
 import tensorflow as tf
 from keras.layers import Dense
-from keras.models import Sequential
+from keras.models import Sequential,load_model
 from keras.optimizers import RMSprop 
 from tensorflow import gather_nd
 from keras.losses import mean_squared_error
 import numpy as np
-
+import keras
 from rps.utilities.misc import *
+
+import glob
+import os
+import re
 
 Transition = namedtuple('Transition',
                         ('state', 'action','reward','next_state', "is_terminal"))
@@ -49,8 +53,30 @@ def soft_update(target_model, primary_model, tau):
     
     target_model.set_weights(updated_weights)
     
+def save_model(model,path):
+    """
+    esta funcion permitira guardar el modelo q(state,action) value network en la ruta especificada
+    """
+    model.save(path)
+
+def save_pretrained_model(model,folder_path,filename):
+    filename_without_ext = filename.split("_v")[0]
+
+    list_of_files = glob.glob(folder_path + "*.keras")
+    if list_of_files == []: #folder is empty
+        full_path = folder_path + filename + ".keras"
+    else: #find latest file and increase its version
+        latest_model = max(list_of_files, key=os.path.getctime)
+
+        version_model=re.findall(filename_without_ext + '_v\d+', latest_model)[0]
+        version_model_index = version_model.find("_v")
+        full_path = folder_path + filename_without_ext + "_v" + str(int(version_model[version_model_index + 2:]) + 1) + ".keras"
+    model.save(full_path)
+
+
 class DQNAgent:
-    def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,timeslot_train_iter_max = 1000 ) -> None:
+    def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,
+                timeslot_train_iter_max = 1000,pretrained_iter_saver = 500,model_full_path = ""):
 
         self.state_dimension = state_dimension
         self.action_space = action_space
@@ -58,6 +84,10 @@ class DQNAgent:
         self.counter_train_timeslot_max = 0 #este contador permitira salir del inner loop training, si el sistema no encuentra un 
         #estado terminal
         self.timeslot_train_iter_max = timeslot_train_iter_max
+
+        #salvar el modelo preentrado cada cierto numero de iteraciones. parametro ingresado a la clase
+        self.counter_iter = 0
+        self.pretrained_iter_saver = pretrained_iter_saver
 
         self.gamma = gamma
         self.epsilon = epsilon
@@ -71,7 +101,13 @@ class DQNAgent:
         self.meanRewardsEpisode = []
 
         #create q network NN model
-        self.q_network = self.createNetwork()
+        self.loss_function = self.my_loss_fn
+        if model_full_path == "": #create q network from scratch
+            self.q_network = self.createNetwork()
+        else: #load pretrained model
+
+            self.load_keras_model(model_full_path)
+
 
         #create target network NN model
         self.target_network = self.createNetwork()
@@ -82,7 +118,11 @@ class DQNAgent:
         # predicted and true sample matrices in order to form the loss
         self.actionsAppend=[]
     
-    
+    def load_keras_model(self,model_full_path):
+        self.q_network = load_model(model_full_path,compile=False)
+        self.q_network.compile(optimizer = RMSprop(), loss = self.loss_function, metrics = ['accuracy'])
+
+
     def update_exploration_probability(self,bool_debug = False):
         self.epsilon = self.epsilon * np.exp(-self.exploration_proba_decay)
 
@@ -121,13 +161,15 @@ class DQNAgent:
         model.add(Dense(56,activation='relu'))
         model.add(Dense(self.action_space.shape[0],activation='linear'))
         # compile the network with the custom loss defined in my_loss_fn
-        model.compile(optimizer = RMSprop(), loss = self.my_loss_fn, metrics = ['accuracy'])
+        model.compile(optimizer = RMSprop(), loss = self.loss_function, metrics = ['accuracy'])
         return model
 
 
 
 
-    def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,bool_debug = False,**args):
+    def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,folder_pretrained_model,
+                        model_name,bool_save_pretrained = False,
+                        bool_debug = False,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
         #ejecutamos accion drone en simulador y obtenemos reward de accion , asi como nuevo estado
@@ -170,6 +212,7 @@ class DQNAgent:
                 #store the transition tuple...
                 self.memoryBuffer.push(current_state,(index_action, action),reward,next_state,is_next_state_terminal)
                 
+
                 #train q_network...
                 if self.memoryBuffer.__len__() > self.batch_size: #si tenemos el minimo de transiciones necesarias
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
@@ -186,7 +229,15 @@ class DQNAgent:
                 obj_process_mob_trans_gu.guProcess(env,obj_gus_list,obj_drone_list,
                 args["MaxGuDist"], args["MaxGuData"],args["StepGuData"], args["PositionController"],at_pose,False)
                 #actualizamos los registros del drone...
-                obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])         
+                obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])   
+
+                #save pretrained model
+                if bool_save_pretrained:
+                    self.counter_iter += 1
+                    if self.counter_iter > self.pretrained_iter_saver:
+                        save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
+                        self.counter_iter = 0
+
 
             self.counter_train_timeslot_max = 0
                 
@@ -263,6 +314,8 @@ class DQNAgent:
 
         # here, we train the network
         self.q_network.fit(inputNetwork,outputNetwork,batch_size = self.batch_size, verbose=0,epochs=100)  
+
+        #
 
         #soft update of the target network parameters to get into the q network parameters  
          # θ′ ← τ θ + (1 −τ )θ′ 

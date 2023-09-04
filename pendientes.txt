@@ -4,6 +4,11 @@ fecha: 31/08/2023
 falta definir la reward function.en modulo env, modificar la accionagent para que pueda retornar next_state,reward, is next state terminal. listo
 me falta guardar la tupla transicion en el buffer. listo
 me falta agregar funcion entrenar red y soft update target parameters. listo
-me falta seguir probando que el entrenamiento no marque errores
-me falta agregar funciones para guardar los pesos de la red y de ir imprimiendo resultados
+me falta seguir probando que el entrenamiento no marque errores. listo, pero es conveniente seguir probando los valores que arroja el 
+training.
+me falta agregar funciones para guardar los pesos de la red y de ir imprimiendo resultados. listo
+me falta agregar en el loop trainingepisodes, cada ciertas iteraciones guardar el modelo. por si llegase a crashear. listo
+tmb me falta agregar la funcionalidad de permitir cargar modelos semientrenados, o completamente entrenados. listo
+me falta cambiar la logica para ubicar drones con gus, asi como la logica para cambiar la transmision de data.
+cehcar si el soft update esta correctamente programado. por el momento lo dejare asi tal y como programe el soft update.
 

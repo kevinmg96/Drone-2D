@@ -55,7 +55,7 @@ number_epsilon_iter_decay = 200 #cada 200 episodios reducimos el valor de epsilo
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 
-r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
+r = environment.environment(boundaries,number_of_robots=N, show_figure=False, initial_conditions=initial_conditions,sim_in_real_time=True)
 
 #create visual drones and effects...
 r.generateVisualRobots(rc,rc_color)
@@ -146,14 +146,27 @@ while (np.size(at_pose(x_robots, goal_points_robots[:,0].reshape(-1,1), position
         r.step_v2(obj_gus_list,obj_drone_list,True)
 
 """
-dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,100,gamma,prob_epsilon,3,5)
-dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,bool_debug=True,
+pretrained_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Trained/DQN single agent-objective/02_09_2023/"
+pretrained_name = "model_1_v1"
+
+#load model test...
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,100,gamma,prob_epsilon,5,10,1000,5,
+                         pretrained_path + pretrained_name + ".keras")
+
+
+
+
+dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,pretrained_path,
+                           pretrained_name,bool_debug=True,
                            GraphRadGu = graph_rad,                             
                            ListColorGu = list_color_gus,                           
                            Rc = rc,RcDroneColor = rc_color,MaxGuData = max_gu_data,StepGuData = step_gu_data,
                            MaxGuDist = max_gu_dist,
                             PositionController = unicycle_position_controller  )
 
+model_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Trained/DQN single agent-objective/02_09_2023/"
+model_name = "model_1_v1.keras"
+DQN.save_model(dqn_agent.q_network,model_path + model_name)
 
 """
 memoryBuffer = DQN.ReplayMemory(5)
@@ -224,6 +237,8 @@ def trainAgent(num_episodes,bool_debug = False):
 #training agent..
 trainAgent(5)
 """
+
+"""
 while True:
     #get goal points randomly for robots and gus
     #obj_process_mob_trans_gu.pauseProcess(True)
@@ -256,3 +271,4 @@ while True:
 
 #Call at end of script to print debug information and for your script to run on the Robotarium server properly
 r.call_at_scripts_end()
+"""
