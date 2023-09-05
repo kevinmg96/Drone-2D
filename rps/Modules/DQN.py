@@ -218,6 +218,13 @@ class DQNAgent:
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
                     self.trainNetwork()
 
+                    #save pretrained model
+                    if bool_save_pretrained:
+                        self.counter_iter += 1
+                        if self.counter_iter > self.pretrained_iter_saver:
+                            save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
+                            self.counter_iter = 0
+
                 if is_next_state_terminal: #if next state is terminal, then finish the training episode and restart the process...
                     #update exploration probability...
                     self.update_exploration_probability()
@@ -231,12 +238,11 @@ class DQNAgent:
                 #actualizamos los registros del drone...
                 obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])   
 
-                #save pretrained model
-                if bool_save_pretrained:
-                    self.counter_iter += 1
-                    if self.counter_iter > self.pretrained_iter_saver:
-                        save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
-                        self.counter_iter = 0
+                #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
+                if env.isTerminalState(obj_drone_list,obj_gus_list):
+                    break
+
+                
 
 
             self.counter_train_timeslot_max = 0
@@ -306,6 +312,7 @@ class DQNAgent:
             outputNetwork[index]=QcurrentStateMainNetwork[index]
             # this is what matters
             outputNetwork[index,action[0]]=y
+
         if bool_debug:
             print("actionAppend : {}".format(self.actionsAppend))
             print("input_network : {}".format(inputNetwork))

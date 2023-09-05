@@ -54,10 +54,13 @@ class environment(robotarium.Robotarium):
         is_next_state_terminal = self.isTerminalState(obj_drone_list,obj_gus_list)
         return next_state,reward,is_next_state_terminal
 
-    def resetEnv(self,obj_drone_list,obj_gus_list,graph_rad,list_color_gus,rc,rc_color):
+    def resetEnv(self,obj_drone_list,obj_gus_list,graph_rad,list_color_gus,rc,rc_color,factor_gu_out_rc = 1.35):
         """
         resetereamos la posicion del robot inicial a una random.
         asi como nuevas posiciones random de los GUs
+        fecha actualizacion 04/09/2023. actualice esta funcion para que los gus sean colocados en una posicion dentro de rc del
+        drone. direccion : random, magnitud : poisson distribution de la magnitud rc, una distribucion poisson controlara
+        el booleano indicando si el gu debera ser colocado en una magnitud mayor a rc por un factor
         """
         #reseteamos la figura y creamos visualmente de nuevo al robot en una posicion random.
         self.reset_env = True
@@ -66,7 +69,7 @@ class environment(robotarium.Robotarium):
         random_new_pos_robots = np.random.random(size=(3,len(obj_drone_list)))
         random_new_pos_robots[0,:] = random_new_pos_robots[0,:] * self.boundaries[2]
         random_new_pos_robots[1,:] = random_new_pos_robots[1,:] * self.boundaries[3]
-        random_new_pos_robots[2,:] = random_new_pos_robots[2,:] * 2 * np.pi
+        random_new_pos_robots[2,:] = 0.0
 
         #update robot poses in environment objects...
         self.poses = random_new_pos_robots
@@ -80,14 +83,23 @@ class environment(robotarium.Robotarium):
         #initialize position robots...        
         self.step_v2(obj_gus_list,obj_drone_list,True)
 
-        #random position gus...
-        random_new_pos_gus = np.random.random(size=(3,len(obj_gus_list)))
-        random_new_pos_gus[0,:] = random_new_pos_gus[0,:] * self.boundaries[2]
-        random_new_pos_gus[1,:] = random_new_pos_gus[1,:] * self.boundaries[3]
-        random_new_pos_gus[2,:] = random_new_pos_gus[2,:] * 2 * np.pi
+        #random position gus inside drone rc...
+        
+        for i,_ in enumerate(obj_gus_list):
+            next_pos_gus_inside_rc = np.where(misc.poissonChoice(1.0,5) < 0.5,True,False)
+            if next_pos_gus_inside_rc: #gu next position inside rc...
+                next_pos_gus_mag = misc.gaussianChoice(rc,0.25)                
+            else: #gu next position outside rc...
+                next_pos_gus_mag = rc * factor_gu_out_rc
+            self.poses_gus[:2,i] = misc.computeNextPosition(next_pos_gus_mag,self.poses[:2,0])
+                
+        #random_new_pos_gus = np.random.random(size=(3,len(obj_gus_list)))
+        #random_new_pos_gus[0,:] = random_new_pos_gus[0,:] * self.boundaries[2]
+        #random_new_pos_gus[1,:] = random_new_pos_gus[1,:] * self.boundaries[3]
+        #random_new_pos_gus[2,:] = 0.0
 
         #update gu poses in environment objects...
-        self.poses_gus = random_new_pos_gus
+        #self.poses_gus = random_new_pos_gus
 
         #update gu poses in gu objects...
         gu.GroundUser.set_gu_poses(obj_gus_list,self.poses_gus,obj_drone_list)
@@ -96,7 +108,7 @@ class environment(robotarium.Robotarium):
         #reset gus in new position.. and velocities
         self.velocities_gus = np.zeros([2,len(obj_gus_list)])    
  
-        self.resetGUs(ObjGuList = obj_gus_list,Pose = random_new_pos_gus, Radius = graph_rad, FaceColor = list_color_gus,
+        self.resetGUs(ObjGuList = obj_gus_list, Radius = graph_rad, FaceColor = list_color_gus,
                            PlotDataRate = True)
         
         #initialize position GU...        
@@ -241,7 +253,7 @@ class environment(robotarium.Robotarium):
         facecolor = args["FaceColor"][i]))
         self.axes.add_patch(self.gu_patches[i])
 
-        #create data rate gu textbox, update: since we are creating/reseting gus, then trans rate starts at -1
+        #create data rate gu textbox, update: since we are creating/reseting gus, then trans rate starts at 0.0
         if args["PlotDataRate"]:
             self.gu_tb_data.append(self.axes.text(self.poses_gus[0,i],self.poses_gus[1,i],
                                                           0.0))

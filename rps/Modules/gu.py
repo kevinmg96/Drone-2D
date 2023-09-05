@@ -11,6 +11,9 @@ tasa de tranmision lo incluire como un textbox en el grafo.
 import numpy as np
 import rps.Modules.misc as misc
 
+
+
+
 class GroundUser:
     def __init__(self,id,pose):
         self.id = id
@@ -28,14 +31,14 @@ class GroundUser:
         """
         1.- variable para indicar que este gu desea tranmitir data
         2.- variable random para cambiar el estado del proceso. decidir si continuar mandando data o parar.
-        3.- si trans data == -1, entonces setearemos la tranmission rate random, si no entonces agregaremos o decrementaremos
+        3.- si trans data == 0.0, entonces setearemos la tranmission rate random, si no entonces agregaremos o decrementaremos
         una cantidad x al valor actual
         actualizacion: seleccionar la tasa a comenzar a transmitir data dependera de la distribucion de probabilidad deseada
         """
-        self.is_gu_transmiting = np.where(misc.poissonChoice(1.0) < 0.5,True,False)#misc.moveObjNextStep()
+        self.is_gu_transmiting = np.where(misc.poissonChoice(1.0,5) < 0.6,True,False)#misc.moveObjNextStep()
 
         if self.is_gu_transmiting: #gu quiere continuar o empezar a transmitir data
-            if self.transmission_rate == -1: #gu no ha empezado a transmitir ninguna data
+            if np.abs(self.transmission_rate) < 0.001: #gu no ha empezado a transmitir ninguna data
                 self.transmission_rate = g_x 
             else: #data esta siendo transmitida, agregaremos o decremetnaremos valor por un step
                 if misc.moveObjNextStep(): #actualizaremos data rate

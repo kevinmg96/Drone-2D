@@ -33,14 +33,14 @@ N = initial_conditions.shape[1]
 boundaries = [0,0,3.2,2.0]
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
-rc = 0.35 #radio de comunicaciones en m
+rc = 0.4 #radio de comunicaciones en m
 rc_color = "k"
-drone_disp_range = [0,0.55] #rango de movimiento permitido del drone
-drone_disp_num  = 2#numero de divisiones en la accion displacement
+drone_disp_range = [0,0.3] #rango de movimiento permitido del drone
+drone_disp_num  = 4#numero de divisiones en la accion displacement
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
-drone_angle_num = 2#numero de divisiones en la accion direction 
+drone_angle_num = 8#numero de divisiones en la accion direction 
 
 arr_drone_angle_values = np.linspace(drone_angle_range[0],drone_angle_range[1],num = drone_angle_num, endpoint= False)
 
@@ -55,7 +55,7 @@ number_epsilon_iter_decay = 200 #cada 200 episodios reducimos el valor de epsilo
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 
-r = environment.environment(boundaries,number_of_robots=N, show_figure=False, initial_conditions=initial_conditions,sim_in_real_time=True)
+r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
 
 #create visual drones and effects...
 r.generateVisualRobots(rc,rc_color)
@@ -63,7 +63,7 @@ r.generateVisualRobots(rc,rc_color)
 obj_drone_list = r.createDrones()
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
-max_gu_dist = 0.5#m
+max_gu_dist = 0.15#m
 list_color_gus = ["r","b"]
 num_gus = 2
 
@@ -71,12 +71,12 @@ gu_pos = (0.525,.95)
 fac = 0.25
 graph_rad = 0.12 #en metros, general para todos
 max_gu_data = 100.0 #bytes/s, kbytes/s
-step_gu_data = 10.0 
+step_gu_data = 5.0 
 
 arr_gu_pose = np.random.random(size=(3,num_gus))
 arr_gu_pose[0,:] = arr_gu_pose[0,:] * boundaries[2]
 arr_gu_pose[1,:] = arr_gu_pose[1,:] * boundaries[3]
-arr_gu_pose[2,:] = arr_gu_pose[2,:] * 2 * np.pi
+arr_gu_pose[2,:] = 0.0
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
 
@@ -150,8 +150,7 @@ pretrained_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios
 pretrained_name = "model_1_v1"
 
 #load model test...
-dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,100,gamma,prob_epsilon,5,10,1000,5,
-                         pretrained_path + pretrained_name + ".keras")
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,100,gamma,prob_epsilon,5,10,1000,5)
 
 
 
@@ -166,7 +165,7 @@ dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_g
 
 model_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Trained/DQN single agent-objective/02_09_2023/"
 model_name = "model_1_v1.keras"
-DQN.save_model(dqn_agent.q_network,model_path + model_name)
+#DQN.save_model(dqn_agent.q_network,model_path + model_name)
 
 """
 memoryBuffer = DQN.ReplayMemory(5)
@@ -236,39 +235,4 @@ def trainAgent(num_episodes,bool_debug = False):
 
 #training agent..
 trainAgent(5)
-"""
-
-"""
-while True:
-    #get goal points randomly for robots and gus
-    #obj_process_mob_trans_gu.pauseProcess(True)
-
-    #obj_process_mob_trans_gu.pauseProcess()
-
-    #obj_process_mob_trans_gu.pauseProcess(True)
-
-    #obj_process_mob_trans_gu.stop_mobility_event.set()
-
-    # While the number of robots at the required poses is less
-    # than N... 
-    while (np.size(at_pose(x_robots, goal_points_robots, position_error = 0.05, rotation_error=100)) != N ):
-
-        # Get poses of agents
-        x_robots = r.get_poses()
-
-        # Create single-integrator control inputs for mobile agents and gus
-        dxu_robots = unicycle_position_controller(x_robots, goal_points_robots[:2][:])
-
-
-        # Create safe control inputs (i.e., no collisions)
-        #dxu_robots = uni_barrier_cert(dxu_robots, x_robots)
-
-        # Set the velocities by mapping the single-integrator inputs to unciycle inputs
-        r.set_velocities(np.arange(N), dxu_robots,True)
-
-        # Iterate the simulation
-        r.step_v2(obj_gus_list,obj_drone_list,True)
-
-#Call at end of script to print debug information and for your script to run on the Robotarium server properly
-r.call_at_scripts_end()
 """

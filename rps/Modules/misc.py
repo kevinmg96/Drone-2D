@@ -3,7 +3,7 @@ libreria de funciones
 """
 import numpy as np
 import scipy.stats as stats
-
+import matplotlib.pyplot as plt
 def euclideanDistance(point_1,point_2):
 
     p1_z = 0
@@ -16,7 +16,24 @@ def euclideanDistance(point_1,point_2):
     return np.sqrt((point_2[0] - point_1[0]) ** 2 + (point_2[1] - point_1[1]) ** 2 + (p2_z - p1_z) ** 2)
 
 
+def gaussianChoice(mag_max,std_dev = 0.1, samp_size = 100000,bool_debug = False):
 
+    #create the gaussian probability distribution of size samp_size
+    x = np.linspace(0,1,samp_size)
+    prob_x = stats.norm.pdf(x,loc = 0.5, scale = std_dev)
+    prob_x = prob_x / np.sum(prob_x)
+
+    if bool_debug:
+        #debugearemos la prob dist
+        plt.plot(prob_x)
+        plt.show()
+
+    #create an array from 0 to mag_max, same size as x
+    pos_y_value = np.linspace(0,mag_max,samp_size)
+
+
+
+    return np.random.choice(pos_y_value,p=prob_x)
 
 def poissonChoice(mag_max,mean = 3,samp_size = 100000,bool_debug = False):
 

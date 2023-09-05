@@ -48,7 +48,7 @@ class ProcesGuMobility:
 
             #indicate if gu needs updating position.
             for i in range(num_gus):
-                if misc.moveObjNextStep():
+                if np.where(misc.poissonChoice(1.0,5) < 0.5,True,False):#misc.moveObjNextStep():
                     #update gu position
                     goal_points_gus[:2,i] = misc.computeNextPosition(misc.poissonChoice(max_gu_dist),x_gus[:2,i]) 
                 else:
