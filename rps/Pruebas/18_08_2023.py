@@ -3,7 +3,9 @@ Sistema: 1 drone , multiples objetivos. dar servicio a dos usuarios en tierra.
 
 algoritmo de optimizacion: Q networks. campo de accion: discreto, discretizar angulos direccion, discretizar distancia maxima de desplazamiento.
 
+codigo empleado para entrenar la red q_state action network
 """
+
 import rps.Modules.environment as environment
 import rps.Modules.gu as gu
 import rps.Modules.misc as misc
@@ -23,6 +25,7 @@ import matplotlib.pyplot as plt
 import time
 import threading
 import itertools
+import pickle
 
 # Instantiate Robotarium object
 
@@ -36,7 +39,7 @@ boundaries = [0,0,3.2,2.0]
 rc = 0.4 #radio de comunicaciones en m
 rc_color = "k"
 drone_disp_range = [0,0.3] #rango de movimiento permitido del drone
-drone_disp_num  = 4#numero de divisiones en la accion displacement
+drone_disp_num  = 5#numero de divisiones en la accion displacement
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
@@ -55,7 +58,7 @@ number_epsilon_iter_decay = 200 #cada 200 episodios reducimos el valor de epsilo
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 
-r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
+r = environment.environment(boundaries,number_of_robots=N, show_figure=False, initial_conditions=initial_conditions,sim_in_real_time=True)
 
 #create visual drones and effects...
 r.generateVisualRobots(rc,rc_color)
@@ -63,7 +66,7 @@ r.generateVisualRobots(rc,rc_color)
 obj_drone_list = r.createDrones()
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
-max_gu_dist = 0.15#m
+max_gu_dist = 0.18#m
 list_color_gus = ["r","b"]
 num_gus = 2
 
@@ -146,13 +149,17 @@ while (np.size(at_pose(x_robots, goal_points_robots[:,0].reshape(-1,1), position
         r.step_v2(obj_gus_list,obj_drone_list,True)
 
 """
-pretrained_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Trained/DQN single agent-objective/02_09_2023/"
-pretrained_name = "model_1_v1"
-
+pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-objective/05_09_2023/model 1 v2/"
+pretrained_model_filename = "model_1_v2--7.keras"
 #load model test...
-dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,100,gamma,prob_epsilon,5,10,1000,5)
+num_episodes = 2500
+batch_size = 700
+train_max_iter = 400
+save_interval_premodel = 2000
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
 
-
+pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/05_09_2023/model 1 v2/"
+pretrained_name = "model_1_v2"
 
 
 dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,pretrained_path,
@@ -163,10 +170,20 @@ dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_g
                            MaxGuDist = max_gu_dist,
                             PositionController = unicycle_position_controller  )
 
-model_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Trained/DQN single agent-objective/02_09_2023/"
-model_name = "model_1_v1.keras"
-#DQN.save_model(dqn_agent.q_network,model_path + model_name)
+trained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-objective/05_09_2023/model 1 v2/"
+model_name = "model_1_v2"
+DQN.save_model(dqn_agent.q_network,trained_path + model_name + ".keras")
 
+print("saving mean reward history plot...")
+fig = plt.figure()
+plt.plot(np.arange(start =1 , stop = dqn_agent.num_episodes + 1), dqn_agent.meanRewardsEpisode)
+plt.xlabel("Number of episodes")
+plt.ylabel("Mean Reward")
+
+# save whole figure 
+pickle.dump(fig, open(trained_path + model_name +".pickle", "wb"))
+
+print("Training complete !")
 """
 memoryBuffer = DQN.ReplayMemory(5)
 

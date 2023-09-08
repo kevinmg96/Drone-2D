@@ -1,16 +1,41 @@
 """
 este modulo contendra todas las clases y funciones que permitan desarrollar el entrenamiento por DQN de nuestro agente.
 """
-from collections import namedtuple, deque
-import random
-import tensorflow as tf
+
+#--------------------------------------------- TENSORFLOW CPU --------------------------------------------------------#
+
+"""
+import keras
 from keras.layers import Dense
 from keras.models import Sequential,load_model
 from keras.optimizers import RMSprop 
 from tensorflow import gather_nd
 from keras.losses import mean_squared_error
-import numpy as np
+
 import keras
+"""
+#-------------------------------------------- TENSORFLOW CPU .----------------------------------------------------------------#
+
+#--------------------------------------------- TENSORFLOW GPU --------------------------------------------------------#
+
+import tensorflow
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential,load_model
+from tensorflow.keras.optimizers import RMSprop
+from tensorflow import gather_nd
+from tensorflow.keras.losses import mean_squared_error
+
+
+
+#-------------------------------------------- TENSORFLOW GPU .----------------------------------------------------------------#
+
+
+from collections import namedtuple, deque
+import random
+import numpy as np
+
+
 from rps.utilities.misc import *
 
 import glob
@@ -60,19 +85,17 @@ def save_model(model,path):
     model.save(path)
 
 def save_pretrained_model(model,folder_path,filename):
-    filename_without_ext = filename.split("_v")[0]
 
     list_of_files = glob.glob(folder_path + "*.keras")
     if list_of_files == []: #folder is empty
-        full_path = folder_path + filename + ".keras"
+        full_path = folder_path + filename + "--1.keras"
     else: #find latest file and increase its version
         latest_model = max(list_of_files, key=os.path.getctime)
 
-        version_model=re.findall(filename_without_ext + '_v\d+', latest_model)[0]
-        version_model_index = version_model.find("_v")
-        full_path = folder_path + filename_without_ext + "_v" + str(int(version_model[version_model_index + 2:]) + 1) + ".keras"
+        version_model=re.findall(filename + '--\d+', latest_model)[0]
+        version_model_index = version_model.find("--")
+        full_path = folder_path + filename + "--" + str(int(version_model[version_model_index + 2:]) + 1) + ".keras"
     model.save(full_path)
-
 
 class DQNAgent:
     def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,
@@ -81,7 +104,7 @@ class DQNAgent:
         self.state_dimension = state_dimension
         self.action_space = action_space
         self.memoryBuffer = ReplayMemory(mem_capacity)
-        self.counter_train_timeslot_max = 0 #este contador permitira salir del inner loop training, si el sistema no encuentra un 
+        self.counter_train_timeslot = 0 #este contador permitira salir del inner loop training, si el sistema no encuentra un 
         #estado terminal
         self.timeslot_train_iter_max = timeslot_train_iter_max
 
@@ -167,9 +190,8 @@ class DQNAgent:
 
 
 
-    def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,folder_pretrained_model,
-                        model_name,bool_save_pretrained = False,
-                        bool_debug = False,**args):
+    def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,folder_pretrained_model = "",
+                        model_name = "",bool_debug = False,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
         #ejecutamos accion drone en simulador y obtenemos reward de accion , asi como nuevo estado
@@ -195,8 +217,8 @@ class DQNAgent:
             is_next_state_terminal = False
 
             while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
-                self.counter_train_timeslot_max += 1
-                if self.counter_train_timeslot_max >self.timeslot_train_iter_max: #salimos del inner loop. cambiamos a otro ep
+                self.counter_train_timeslot += 1
+                if self.counter_train_timeslot >self.timeslot_train_iter_max: #salimos del inner loop. cambiamos a otro ep
                     break
                 
 
@@ -219,7 +241,7 @@ class DQNAgent:
                     self.trainNetwork()
 
                     #save pretrained model
-                    if bool_save_pretrained:
+                    if not folder_pretrained_model == "":
                         self.counter_iter += 1
                         if self.counter_iter > self.pretrained_iter_saver:
                             save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
@@ -240,16 +262,14 @@ class DQNAgent:
 
                 #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
                 if env.isTerminalState(obj_drone_list,obj_gus_list):
-                    break
-
-                
-
-
-            self.counter_train_timeslot_max = 0
+                    break            
                 
             if bool_debug:
-                print("mean rewards : {},episode : {}".format(np.mean(rewards_per_episode), i))        
+                print("mean rewards : {},episode : {}, num. iterations: {}".format(np.mean(rewards_per_episode), i,
+                                                                                   self.counter_train_timeslot))        
             self.meanRewardsEpisode.append(np.mean(rewards_per_episode))
+
+            self.counter_train_timeslot = 0
 
     def selectAction(self,state):
         """
@@ -260,7 +280,7 @@ class DQNAgent:
             return index_action,self.action_space[index_action,:]
         else:
             # calculamos el valor q(state,action) utilizando main network
-            q_values =self.q_network.predict(state) 
+            q_values =self.q_network.predict(state,verbose = 0) 
             return np.argmax(q_values),self.action_space[np.argmax(q_values),:]
 
     def trainNetwork(self,bool_debug = False):             
@@ -282,9 +302,9 @@ class DQNAgent:
             nextStateBatch[index,:]=tupleS[3]
              
         # here, use the target network to predict Q-values 
-        QnextStateTargetNetwork=self.target_network.predict(nextStateBatch)
+        QnextStateTargetNetwork=self.target_network.predict(nextStateBatch,verbose = 0)
         # here, use the main network to predict Q-values 
-        QcurrentStateMainNetwork=self.q_network.predict(currentStateBatch)
+        QcurrentStateMainNetwork=self.q_network.predict(currentStateBatch,verbose = 0)
              
         # now, we form batches for training
         # input for training

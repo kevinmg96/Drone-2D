@@ -93,14 +93,7 @@ class environment(robotarium.Robotarium):
                 next_pos_gus_mag = rc * factor_gu_out_rc
             self.poses_gus[:2,i] = misc.computeNextPosition(next_pos_gus_mag,self.poses[:2,0])
                 
-        #random_new_pos_gus = np.random.random(size=(3,len(obj_gus_list)))
-        #random_new_pos_gus[0,:] = random_new_pos_gus[0,:] * self.boundaries[2]
-        #random_new_pos_gus[1,:] = random_new_pos_gus[1,:] * self.boundaries[3]
-        #random_new_pos_gus[2,:] = 0.0
-
-        #update gu poses in environment objects...
-        #self.poses_gus = random_new_pos_gus
-
+   
         #update gu poses in gu objects...
         gu.GroundUser.set_gu_poses(obj_gus_list,self.poses_gus,obj_drone_list)
         

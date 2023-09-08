@@ -1,3 +1,4 @@
 {
-  "Interpreter": "CondaEnv|CondaEnv|drone2denv"
+  "TestFramework": "Pytest",
+  "Interpreter": "CondaEnv|CondaEnv|drone2denvgpu"
 }
