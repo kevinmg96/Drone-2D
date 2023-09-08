@@ -1,5 +1,9 @@
+
 Introduction
 ============
+
+Disclaimer: This is a fork of the Robotarium Project developed by Georgia Institute of Technology. Modifications to their software library were made in order to reach the desired goals for my project.
+The purpose of this repo is to train the mobile agent to follow the unknown dynamics of a group of ground users, deep q networks (DQN) algorithm was implemented as the training model to reach the proposed objective. 
 
 This is a Python simulator for Robotarium! The Robotarium is a project at Georgia Institute of Technology allowing public, remote access to a state-of-the-art multi-robot testbed.
 
@@ -183,4 +187,7 @@ To run one of the examples:
 
 ## Issues
 Please enter a ticket in the [issue tracker](https://github.com/robotarium/robotarium_python_simulator/issues).
+
+## Credits
+Robotarium Simulator created by Georgia Institute of Technology
 
