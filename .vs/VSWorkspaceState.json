@@ -2,8 +2,12 @@
   "ExpandedNodes": [
     "",
     "\\rps",
-    "\\rps\\Tests"
+    "\\rps\\Modules",
+    "\\rps\\NN_models",
+    "\\rps\\NN_models\\Trained",
+    "\\rps\\NN_models\\Trained\\DQN single agent-objective",
+    "\\rps\\Pruebas"
   ],
-  "SelectedNode": "\\rps\\Tests\\18_08_2023.py",
+  "SelectedNode": "\\rps\\Pruebas\\18_08_2023.py",
   "PreviewInSolutionExplorer": false
 }
