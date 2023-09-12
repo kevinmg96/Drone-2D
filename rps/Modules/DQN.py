@@ -77,6 +77,8 @@ def soft_update(target_model, primary_model, tau):
         updated_weights.append(tau * primary_weights[i] + (1 - tau) * target_weights[i])
     
     target_model.set_weights(updated_weights)
+
+#-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
     
 def save_model(model,path):
     """
@@ -96,6 +98,20 @@ def save_pretrained_model(model,folder_path,filename):
         version_model_index = version_model.find("--")
         full_path = folder_path + filename + "--" + str(int(version_model[version_model_index + 2:]) + 1) + ".keras"
     model.save(full_path)
+
+def load_info_data(full_data_path):
+    data_file =  open(full_data_path, "r") 
+    return ((data_file.read()).split(",")).pop()
+
+def plot_rewards(data):
+    fig = plt.figure()
+    plt.plot(np.arange(start =1 , stop = len(data) + 1), data)
+    plt.xlabel("Number of episodes")
+    plt.ylabel("Mean Reward")
+    plt.show()
+
+
+#-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
 
 class DQNAgent:
     def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,
@@ -121,7 +137,7 @@ class DQNAgent:
         #los pesos hacia los valores de q network
 
         #mean de las recompensas por episodio
-        self.meanRewardsEpisode = []
+        self.meanRewardsEpisode = "" # change methodology to save it in string format[]
 
         #create q network NN model
         self.loss_function = self.my_loss_fn
@@ -191,7 +207,7 @@ class DQNAgent:
 
 
     def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,folder_pretrained_model = "",
-                        model_name = "",bool_debug = False,**args):
+                        model_name = "",info_data_file = "",bool_debug = False,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
         #ejecutamos accion drone en simulador y obtenemos reward de accion , asi como nuevo estado
@@ -240,12 +256,19 @@ class DQNAgent:
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
                     self.trainNetwork()
 
-                    #save pretrained model
+                    #save pretrained model and save a text file with mean episode rewards
                     if not folder_pretrained_model == "":
                         self.counter_iter += 1
                         if self.counter_iter > self.pretrained_iter_saver:
                             save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
                             self.counter_iter = 0
+
+                            #mean episode rewards save
+                            with open(folder_pretrained_model + info_data_file + ".txt","a+") as f:
+                                f.write(self.meanRewardsEpisode)
+                                self.meanRewardsEpisode = ""
+
+
 
                 if is_next_state_terminal: #if next state is terminal, then finish the training episode and restart the process...
                     #update exploration probability...
@@ -267,7 +290,7 @@ class DQNAgent:
             if bool_debug:
                 print("mean rewards : {},episode : {}, num. iterations: {}".format(np.mean(rewards_per_episode), i,
                                                                                    self.counter_train_timeslot))        
-            self.meanRewardsEpisode.append(np.mean(rewards_per_episode))
+            self.meanRewardsEpisode += str(np.mean(rewards_per_episode)) + ","
 
             self.counter_train_timeslot = 0
 

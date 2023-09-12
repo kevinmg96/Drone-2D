@@ -154,16 +154,16 @@ pretrained_model_filename = "model_1_v2--7.keras"
 #load model test...
 num_episodes = 2500
 batch_size = 700
-train_max_iter = 400
+train_max_iter = 200
 save_interval_premodel = 2000
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
 
 pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/05_09_2023/model 1 v2/"
 pretrained_name = "model_1_v2"
-
+pretrained_data_filename = "model_1_v2_data"
 
 dqn_agent.trainingEpisodes(r,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,pretrained_path,
-                           pretrained_name,bool_debug=True,
+                           pretrained_name,pretrained_data_filename,bool_debug=True,
                            GraphRadGu = graph_rad,                             
                            ListColorGu = list_color_gus,                           
                            Rc = rc,RcDroneColor = rc_color,MaxGuData = max_gu_data,StepGuData = step_gu_data,
@@ -174,14 +174,10 @@ trained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 D
 model_name = "model_1_v2"
 DQN.save_model(dqn_agent.q_network,trained_path + model_name + ".keras")
 
-print("saving mean reward history plot...")
-fig = plt.figure()
-plt.plot(np.arange(start =1 , stop = dqn_agent.num_episodes + 1), dqn_agent.meanRewardsEpisode)
-plt.xlabel("Number of episodes")
-plt.ylabel("Mean Reward")
+print("saving mean reward history last episodes...")
 
-# save whole figure 
-pickle.dump(fig, open(trained_path + model_name +".pickle", "wb"))
+with open(pretrained_path + pretrained_data_filename + ".txt","a+") as f:
+    f.write(dqn_agent.meanRewardsEpisode)
 
 print("Training complete !")
 """
