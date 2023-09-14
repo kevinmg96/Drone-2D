@@ -111,3 +111,6 @@ def computeNextPosition(next_mag,pos,direction = 2 * np.pi,bool_pos_gu = True,bo
 
     return new_pos
 
+if __name__ == "__main__":
+    max_distance = 5.0
+    dist_distributions = [randomChoice(max_distance), poissonChoice(max_distance),gaussianChoice(max_distance) ]

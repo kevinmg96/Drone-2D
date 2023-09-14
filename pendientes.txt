@@ -29,3 +29,6 @@ una cantidad maxima en direccion aleatoria (current)
 2.- tener un array con diferentes distribuciones de probabilidad (random, poisson, gaussian) y concatenar la accion con un array
 de distancias maximas a ejecutar los gus. tomar decisiones random en estas 3 distribuciones
 
+#---------------------------------------------
+agregare una variable con el producto cartesiano entre las 3 distribuciones (calcular next dist gus) contra una direccion random
+actualizar reward function

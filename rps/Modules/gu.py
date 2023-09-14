@@ -52,7 +52,7 @@ class GroundUser:
 
             if self.is_gu_transmiting[i]: #gu quiere continuar o empezar a transmitir data
                 if np.abs(self.transmission_rate[i]) < 0.001: #gu no ha empezado a transmitir ninguna data
-                    self.transmission_rate[i] = g_x 
+                    self.transmission_rate[i] = misc.randomChoice(g_x) 
                 else: #data esta siendo transmitida, agregaremos o decremetnaremos valor por un step
                     if misc.moveObjNextStep(): #actualizaremos data rate
                         temp_rate = self.transmission_rate[i] + np.where(misc.moveObjNextStep(),1,-1) * self.step_gu_data

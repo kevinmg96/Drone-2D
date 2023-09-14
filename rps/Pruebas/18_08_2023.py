@@ -35,10 +35,10 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 boundaries = [0,0,3.2,2.0]
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
-rc = 0.4 #radio de comunicaciones en m
+rc = 0.5 #radio de comunicaciones en m
 rc_color = "k"
-drone_disp_range = [0,0.3] #rango de movimiento permitido del drone
-drone_disp_num  = 5#numero de divisiones en la accion displacement
+drone_disp_range = [0,0.35] #rango de movimiento permitido del drone
+drone_disp_num  = 8#numero de divisiones en la accion displacement
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
@@ -118,13 +118,13 @@ obj_process_mob_trans_gu.setStopProcess()
 pretrained_model_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Pretrained/DQN single agent-objective/05_09_2023/model 1 v2/"
 pretrained_model_filename = "model_1_v2--30.keras"
 #load model test...
-num_episodes = 2500
+num_episodes = 1500
 batch_size = 700
 train_max_iter = 150
 save_interval_premodel = 3500
 memory_capacity = 6000
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel,pretrained_model_path + pretrained_model_filename)
+                         save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
 
 pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/05_09_2023/model 1 v2/"
 pretrained_name = "model_1_v2"

@@ -49,7 +49,13 @@ class ProcesGuMobility:
             for i in range(num_gus):
                 if np.where(misc.poissonChoice(1.0,5) < 0.5,True,False):#misc.moveObjNextStep():
                     #update gu position
-                    goal_points_gus[:2,i] = misc.computeNextPosition(misc.poissonChoice(r.obj_gus.max_gu_dist),x_gus[:2,i]) 
+
+                    #get next magnitude displacement probability distribution
+                    next_disp_distribution = [misc.randomChoice(r.obj_gus.max_gu_dist),misc.poissonChoice(r.obj_gus.max_gu_dist),
+                                              misc.gaussianChoice(r.obj_gus.max_gu_dist)]
+                    p_distribution = [0.35,0.5,0.15]
+                    next_dist_gu = np.random.choice(next_disp_distribution,p=p_distribution)
+                    goal_points_gus[:2,i] = misc.computeNextPosition(next_dist_gu,x_gus[:2,i]) 
                 else:
                     #keep current position
                     goal_points_gus[:2,i] = x_gus[:2,i]
@@ -58,7 +64,7 @@ class ProcesGuMobility:
                     print("GU : {}, new position: {}".format(r.obj_gus.ids[i],goal_points_gus[:2,i]))
 
                 #actualizamos estatus data tranmission y rate de los gus
-                r.obj_gus.setTransmissionRate(misc.randomChoice(r.obj_gus.max_gu_data),False)
+                r.obj_gus.setTransmissionRate(r.obj_gus.max_gu_data,False)#misc.randomChoice(r.obj_gus.max_gu_data),False)
                 
                 #actualizamos data transmission value en ambiente
                 if r.show_figure:
