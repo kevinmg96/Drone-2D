@@ -30,5 +30,6 @@ una cantidad maxima en direccion aleatoria (current)
 de distancias maximas a ejecutar los gus. tomar decisiones random en estas 3 distribuciones
 
 #---------------------------------------------
-agregare una variable con el producto cartesiano entre las 3 distribuciones (calcular next dist gus) contra una direccion random
+agregare una variable con el producto cartesiano entre las 3 distribuciones (calcular next dist gus) contra una direccion random.
+listo, falta realizar mas tests
 actualizar reward function
