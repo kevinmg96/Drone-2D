@@ -181,7 +181,7 @@ class RobotariumABC(ABC):
             if self.reset_env:
                 #self.figure.clear()
                 self.axes.clear()
-                self.obj_drones.reset_drones_velocities()
+                #self.obj_drones.reset_drones_velocities()
             else:
                 self.figure, self.axes = plt.subplots()
                 #print("tipo objeto figure : {}".format(type(self.figure)))

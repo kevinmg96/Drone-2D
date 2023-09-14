@@ -33,6 +33,7 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
+show_figure = False
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
@@ -75,7 +76,7 @@ arr_gu_pose[2,:] = 0.0
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
 
-r = environment.environment(boundaries,initial_conditions=initial_conditions,show_figure=True,sim_in_real_time=True,
+r = environment.environment(boundaries,initial_conditions=initial_conditions,show_figure=show_figure,sim_in_real_time=True,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data  )
 
@@ -99,8 +100,8 @@ unicycle_position_controller = create_clf_unicycle_position_controller()
 #uni_barrier_cert = create_unicycle_barrier_certificate()
 
 #initialize position of robots...
-
-r.step_v2(True)
+if show_figure:
+    r.step_v2(True)
 
 #creamos proceso movilidad y transmision de data gus
 obj_process_mob_trans_gu = gu_process.ProcesGuMobility()

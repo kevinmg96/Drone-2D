@@ -28,26 +28,28 @@ class environment(robotarium.Robotarium):
         #formato de accion: (magnitud,direccion) ->convertir en punto
         drone_next_pos = misc.computeNextPosition(action[0],self.obj_drones.poses[:2,0],action[1],False)
 
-
-        # Get poses of agents
-        x_robots = self.obj_drones.poses
-
-        goal_points_robots = np.zeros([3,self.number_of_robots])
-        goal_points_robots[:2,0] = drone_next_pos
-
-        while (np.size(pose_eval(x_robots, goal_points_robots, position_error = 0.05, rotation_error=300)) != self.number_of_robots ):
-
+        if self.show_figure: #if debugging results, use single integrator to drive the dynamics of the robots
             # Get poses of agents
             x_robots = self.obj_drones.poses
 
-            # Create single-integrator control inputs for mobile agents and gus
-            dxu_robots = unicycle_position_controller(x_robots, goal_points_robots[:2][:])
+            goal_points_robots = np.zeros([3,self.number_of_robots])
+            goal_points_robots[:2,0] = drone_next_pos
 
-            # Set the velocities by mapping the single-integrator inputs to unciycle inputs
-            self.set_velocities(dxu_robots,True)
+            while (np.size(pose_eval(x_robots, goal_points_robots, position_error = 0.05, rotation_error=300)) != self.number_of_robots ):
 
-            # Iterate the simulation
-            self.step_v2(True)
+                # Get poses of agents
+                x_robots = self.obj_drones.poses
+
+                # Create single-integrator control inputs for mobile agents and gus
+                dxu_robots = unicycle_position_controller(x_robots, goal_points_robots[:2][:])
+
+                # Set the velocities by mapping the single-integrator inputs to unciycle inputs
+                self.set_velocities(dxu_robots,True)
+
+                # Iterate the simulation
+                self.step_v2(True)
+            else: # if training, the next drone positions will be automatically used to update drones pose
+                self.obj_drones.poses[:2,:] = drone_next_pos
 
         #actualizamos los registros del drone...
         self.obj_drones.echoRadio(self.obj_gus)
@@ -78,11 +80,15 @@ class environment(robotarium.Robotarium):
         #update robot poses in environment objects...
         self.obj_drones.poses = random_new_pos_robots
 
+        #reset drones velocities
+        self.obj_drones.reset_drones_velocities()
+
         #create drones in new position..     y reseteamos listas con data de drones 
         self.generateVisualRobots()
 
-        #initialize position robots...        
-        self.step_v2(True)
+        #initialize position robots...
+        if self.show_figure:     # training, execute step   
+            self.step_v2(True)
 
         #--------------------------------------------------
 
@@ -95,13 +101,14 @@ class environment(robotarium.Robotarium):
                 next_pos_gus_mag = self.obj_drones.rc * factor_gu_out_rc
             self.obj_gus.poses[:2,i] = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
                 
-        #reset gus in new position.. and velocities
+        #reset gus  velocities
         self.obj_gus.reset_gus_velocities()  
  
         self.resetGUs()
         
-        #initialize position GU...        
-        self.step_v2()
+        #initialize position GU...
+        if self.show_figure: # training, execute step         
+            self.step_v2()
 
         self.reset_env = False
 

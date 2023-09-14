@@ -71,20 +71,22 @@ class ProcesGuMobility:
                     r.updateGUDataRate(i,r.obj_gus.transmission_rate[i])
 
 
+            if r.show_figure: #if debugging results, use single integrator to drive the dynamics of the gus
+                #actualizamos posiciones de los gus...
+                while (np.size(pose_eval(x_gus, goal_points_gus,position_error = 0.05, rotation_error=300)) != num_gus):
+                    #get pose gus
+                    x_gus = r.obj_gus.poses 
 
-            #actualizamos posiciones de los gus...
-            while (np.size(pose_eval(x_gus, goal_points_gus,position_error = 0.05, rotation_error=300)) != num_gus):
-                #get pose gus
-                x_gus = r.obj_gus.poses 
+                    # Create single-integrator control inputs for gus
+                    dxu_gus = unicycle_position_controller(x_gus, goal_points_gus[:2,:])
 
-                # Create single-integrator control inputs for gus
-                dxu_gus = unicycle_position_controller(x_gus, goal_points_gus[:2,:])
+                    # Set the velocities by mapping the single-integrator inputs to unciycle inputs
+                    r.set_velocities(dxu_gus)
 
-                # Set the velocities by mapping the single-integrator inputs to unciycle inputs
-                r.set_velocities(dxu_gus)
-
-                # Iterate the simulation
-                r.step_v2()
+                    # Iterate the simulation
+                    r.step_v2()
+            else: # if training, the next drone positions will be automatically used to update gus pose
+                r.obj_gus.poses = goal_points_gus
             
             if bool_debug:           
                 end = time.time()
