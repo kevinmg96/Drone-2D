@@ -28,13 +28,13 @@ import pickle
 
 def test_performance_model(dqn_agent,env,**args):
     #reseteamos el ambiente, al inicio de cada episodio...
-    env.resetEnv(obj_drone_list,obj_gus_list,args["GraphRadGu"],args["ListColorGu"],args["Rc"],args["RcDroneColor"])
+    env.resetEnv()
            
     #actualizamos los registros del drone...
-    obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])
+    env.obj_drones.echoRadio(env.obj_gus)
 
     #get initial state
-    current_state = env.getState(obj_drone_list,obj_gus_list,args["MaxGuData"])
+    current_state = env.getState()
     is_next_state_terminal = False
 
     rewards_per_episode = []
@@ -49,20 +49,19 @@ def test_performance_model(dqn_agent,env,**args):
         index_action, action = dqn_agent.selectAction(current_state)
 
         #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-        next_state,reward,is_next_state_terminal = env.stepEnv(obj_drone_list,obj_gus_list,action,at_pose,
-        args["PositionController"],args["Rc"],args["MaxGuData"])
+        next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"])
         rewards_per_episode.append(reward)     
 
         current_state = next_state
                 
         # ejecutamos acciones de los gus...
-        obj_process_mob_trans_gu.guProcess(env,obj_gus_list,obj_drone_list,
-        args["MaxGuDist"], args["MaxGuData"],args["StepGuData"], args["PositionController"],at_pose,False)
+        obj_process_mob_trans_gu.guProcess(env,args["PositionController"],at_pose,False)
+
         #actualizamos los registros del drone...
-        obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])   
+        env.obj_drones.echoRadio(env.obj_gus)   
 
         #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
-        if env.isTerminalState(obj_drone_list,obj_gus_list):
+        if env.isTerminalState():
             break 
 
     #plot rewards..
@@ -73,8 +72,7 @@ def test_performance_model(dqn_agent,env,**args):
 # Instantiate Robotarium object
 
 initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.25; 0.2 0.5 0.75 1.0 1.25; 0 0 0 0 0'))
-N = initial_conditions.shape[1]
-#r = robotarium.Robotarium(number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
+
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
 
@@ -95,21 +93,14 @@ cartesian_action = np.array(list(itertools.product(arr_drone_disp_values,arr_dro
 encode_action = np.arange(cartesian_action.shape[0])
 
 #E-greedy policy
-prob_epsilon = 0.2
+prob_epsilon = 0.0
 prob_epsilon_decay = 0.999 #despues de ciertas iteraciones, reducimos el valor de la prob de exploracion
 number_epsilon_iter_decay = 200 #cada 200 episodios reducimos el valor de epsilon
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 
-r = environment.environment(boundaries,number_of_robots=N, show_figure=True, initial_conditions=initial_conditions,sim_in_real_time=True)
-
-#create visual drones and effects...
-r.generateVisualRobots(rc,rc_color)
-#create mobile agent objs
-obj_drone_list = r.createDrones()
-
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
-max_gu_dist = 0.25#m
+max_gu_dist = 0.18#m
 list_color_gus = ["r","b"]
 num_gus = 2
 
@@ -126,8 +117,11 @@ arr_gu_pose[2,:] = 0.0
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
 
-obj_gus_list = r.createGUs(PoseDrone = obj_drone_list[0].pose, Pose= arr_gu_pose, Radius = graph_rad, FaceColor = list_color_gus,
-                           PlotDataRate = True) 
+r = environment.environment(boundaries,initial_conditions=initial_conditions,show_figure=True,sim_in_real_time=True,
+    Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
+       PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data  )
+
+
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 state_dimension = 6
@@ -137,7 +131,7 @@ gamma = 0.1
 
 # Define goal points by removing orientation from poses
 #inclui random goal points gus
-goal_points_robots = np.array(np.mat('0.35 1.2 0.95 1.4 2.5; 1.0 0.25 1.75 1.5 0.15; 0 0 0 0 0'))#generate_initial_conditions(N)
+goal_points_robots = np.array(np.mat('0.35 1.2 0.95 1.4 2.5; 1.0 0.25 1.75 1.5 0.15; 0 0 0 0 0'))
 goal_points_gus = np.array(np.mat('0.75 2.3; 0.35 0.47; 0 0'))#generate_initial_conditions(num_gus)
 
 # Create unicycle position controller
@@ -147,8 +141,8 @@ unicycle_position_controller = create_clf_unicycle_position_controller()
 #uni_barrier_cert = create_unicycle_barrier_certificate()
 
 #initialize position of robots...
-x_robots = r.get_poses()
-r.step_v2(obj_gus_list,obj_drone_list,True)
+
+r.step_v2(True)
 
 #creamos proceso movilidad y transmision de data gus
 obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
@@ -170,14 +164,10 @@ num_episodes = 2500
 batch_size = 700
 train_max_iter = 200
 save_interval_premodel = 2000
-dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,
-train_max_iter,save_interval_premodel,pretrained_model_path + pretrained_model_filename)
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
+                         save_interval_premodel,pretrained_model_path + pretrained_model_filename)
 
 
 
 # test model...
-test_performance_model(dqn_agent,r,GraphRadGu = graph_rad,                             
-                           ListColorGu = list_color_gus,                           
-                           Rc = rc,RcDroneColor = rc_color,MaxGuData = max_gu_data,StepGuData = step_gu_data,
-                           MaxGuDist = max_gu_dist,
-                            PositionController = unicycle_position_controller)
+test_performance_model(dqn_agent,r, PositionController = unicycle_position_controller)

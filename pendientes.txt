@@ -1,14 +1,31 @@
 ---------------------------------------------- PENDIENTES -----------------------------------
+current objectives: max gu data rate
 fecha: 11/09/2023
 Pendientes DRONE2D single objective function 2 GUS DQN ..
 revisar reward function
 tengo muchas variables y objetos para almacenar la misma data (ej: gus, drone pos) modificare el codigo del robotarium para funcioanr
-con mis metodologias de programacion
+con mis metodologias de programacion. listo.
 desarrollar el modulo para testear el algoritmo DQN entrenado. listo
 grabar backups del archivo pickle que guarda los meanrewards por episodio. listo
-optimizar el codigo ya que los entrenamientos estan costando demasiada memoria RAM. 
-parece que el agente es capaz de seguir a los gus que si requieran mas data rate. y si se queda rondando por la localizacion del
-ultimo gu con mayor data rate.pero falta mejorar el entrenamiento. en ocasiones toma acciones que hacen que pierda la conexion con el gu
-en otras ocasiones se ve que no actua inteligentemente.
-pobre modelo 1 v2 30 y 34
+optimizar el codigo ya que los entrenamientos estan costando demasiada memoria RAM. cada ciertos training steps los mean rewards por
+episodio son guardados en un archivo. no encontre otra forma de reducir el costo computacional de tiempo
+
+
+
+prob.e modelo v2 30 y 34, al inicio el drone es capaz de quedarse estacionario ya que sabe que los gus estan en su rango rc. sin embargo,
+cuando uno de los gus se aleja, en ocasiones sigue al gu con mayor data rate, y en otras ocasiones se queda con el de menor data rate.
+pero lo que siempre pasa despues de varias iteraciones, es que el drone decide alejarse bastante de los gus (fuera de rango rc).
+falta mejorar entrenamiento.
+
+ideas finalizar episodio de training:
+1.- si algun gu o drone sobrepasan el area de entrenamiento (current)
+2.- si drone se sobrepasa, penalizar reward func y no ejecutar dicha accion. si gu se pasa, end training
+3.- cada episodio, gus aleatorios, y el drone debe ser capaz de cubrir a los gus.
+4.- por n cantidad de timeslots
+
+ideas movimientos gus:
+1.- en el rango rc del drone, generamos aleatoriamente una posicion para cada gu. despues la accion de cada gu es desplazarse
+una cantidad maxima en direccion aleatoria (current)
+2.- tener un array con diferentes distribuciones de probabilidad (random, poisson, gaussian) y concatenar la accion con un array
+de distancias maximas a ejecutar los gus. tomar decisiones random en estas 3 distribuciones
 

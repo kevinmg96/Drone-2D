@@ -115,7 +115,7 @@ def plot_rewards(data):
 
 class DQNAgent:
     def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,
-                timeslot_train_iter_max = 1000,pretrained_iter_saver = 500,model_full_path = ""):
+                timeslot_train_iter_max = 1000,pretrained_iter_saver = 500,target_network_update_interval = 300,model_full_path = ""):
 
         self.state_dimension = state_dimension
         self.action_space = action_space
@@ -135,6 +135,8 @@ class DQNAgent:
         self.exploration_proba_decay = 0.005
         self.tau = 0.005 # soft update: este valor lentamente reducira los pesos del target network e ira acercando mas
         #los pesos hacia los valores de q network
+        self.counter_update_target_network  = 0#este counter incrementará durante cada timestep
+        self.target_network_update_interval = target_network_update_interval 
 
         #mean de las recompensas por episodio
         self.meanRewardsEpisode = "" # change methodology to save it in string format[]
@@ -144,7 +146,6 @@ class DQNAgent:
         if model_full_path == "": #create q network from scratch
             self.q_network = self.createNetwork()
         else: #load pretrained model
-
             self.load_keras_model(model_full_path)
 
 
@@ -206,7 +207,7 @@ class DQNAgent:
 
 
 
-    def trainingEpisodes(self,env,obj_drone_list,obj_gus_list,obj_process_mob_trans_gu,folder_pretrained_model = "",
+    def trainingEpisodes(self,env,obj_process_mob_trans_gu,folder_pretrained_model = "",
                         model_name = "",info_data_file = "",bool_debug = False,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
@@ -219,16 +220,14 @@ class DQNAgent:
             if bool_debug:
                 print("Simulating episode {}".format(i))
 
-            #reseteamos el ambiente, al inicio de cada episodio...
-
-           
-            env.resetEnv(obj_drone_list,obj_gus_list,args["GraphRadGu"],args["ListColorGu"],args["Rc"],args["RcDroneColor"])
+            #reseteamos el ambiente, al inicio de cada episodio...           
+            env.resetEnv()
            
             #actualizamos los registros del drone...
-            obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])
+            env.obj_drones.echoRadio(env.obj_gus)
 
             #get initial state
-            current_state = env.getState(obj_drone_list,obj_gus_list,args["MaxGuData"])
+            current_state = env.getState()
             
             is_next_state_terminal = False
 
@@ -242,8 +241,7 @@ class DQNAgent:
                 index_action, action = self.selectAction(current_state)
 
                 #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-                next_state,reward,is_next_state_terminal = env.stepEnv(obj_drone_list,obj_gus_list,action,at_pose,
-                args["PositionController"],args["Rc"],args["MaxGuData"])
+                next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"])
                 rewards_per_episode.append(reward)
 
 
@@ -268,8 +266,6 @@ class DQNAgent:
                                 f.write(self.meanRewardsEpisode)
                                 self.meanRewardsEpisode = ""
 
-
-
                 if is_next_state_terminal: #if next state is terminal, then finish the training episode and restart the process...
                     #update exploration probability...
                     self.update_exploration_probability()
@@ -277,20 +273,20 @@ class DQNAgent:
 
                 current_state = next_state
                 
-                # ejecutamos acciones de los gus...
-                obj_process_mob_trans_gu.guProcess(env,obj_gus_list,obj_drone_list,
-                args["MaxGuDist"], args["MaxGuData"],args["StepGuData"], args["PositionController"],at_pose,False)
+                # ejecutamos acciones de los gus
+                obj_process_mob_trans_gu.guProcess(env,args["PositionController"],at_pose,False)
+
                 #actualizamos los registros del drone...
-                obj_drone_list[0].echoRadio(obj_gus_list,args["Rc"])   
+                env.obj_drones.echoRadio(env.obj_gus)   
 
                 #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
-                if env.isTerminalState(obj_drone_list,obj_gus_list):
+                if env.isTerminalState():
                     break            
                 
             if bool_debug:
                 print("mean rewards : {},episode : {}, num. iterations: {}".format(np.mean(rewards_per_episode), i,
                                                                                    self.counter_train_timeslot))        
-            self.meanRewardsEpisode += str(np.mean(rewards_per_episode)) + ","
+            self.meanRewardsEpisode += str(np.round(np.mean(rewards_per_episode),3)) + ","
 
             self.counter_train_timeslot = 0
 
@@ -369,7 +365,14 @@ class DQNAgent:
 
         #soft update of the target network parameters to get into the q network parameters  
          # θ′ ← τ θ + (1 −τ )θ′ 
-        soft_update(self.target_network,self.q_network,self.tau)
+        #soft_update(self.target_network,self.q_network,self.tau)
+
+        #update the target networks if counter == update interval
+        self.counter_update_target_network += 1
+        if self.counter_update_target_network == self.target_network_update_interval:
+            self.target_network.set_weights(self.q_network.get_weights())
+            self.counter_update_target_network = 0
+
 
              
        

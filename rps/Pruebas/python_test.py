@@ -1,43 +1,19 @@
-"""
-pickle test: dump a graphic in file every t iterations
-"""
-import matplotlib.pyplot as plt
 import numpy as np
-import pickle
-import json
-fig = plt.figure()
-size = 10
-#plt.plot(np.random.randint(0,10,size=(size,)))
-#plt.xlabel("Number of episodes")
-#plt.ylabel("Mean Reward")
 
-# save whole figure 
-trained_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/Pruebas/"
-model_name = "updating_graph_test"
-l = [10,15,20,20]
-for _ in range(size):
-    with open(trained_path + model_name + ".txt","a+") as f:
-        f.write(str(np.random.randint(0,10)) + ",")
-    #pickle.dump("hola como estas", open(trained_path + model_name +".txt", "wb"))
+x = np.random.randint(0,9,size=(3,4))
+print(x)
+y = np.random.randint(0,9,size=(3,4))
+print(y)
+w = np.concatenate([x,y],axis = 1)
+print(w)
+boundaries = [0,0,10,10]
+bool_arr = np.zeros([w.shape[1]])
+s = w[0,:] > 12
 
-#open graphic
+c_1 = (w[0,:] > boundaries[2]).any()
+c_2 = (w[0,:] < boundaries[0]).any()
+c_3 = (w[1,:] > boundaries[3]).any()
+c_4 = (w[1,:] < boundaries[1]).any()
+r = np.where(c_1 or c_2 or c_3 or c_4,True,False)
 
-data =  open(trained_path + model_name + ".txt", "r") 
-dt = (data.read()).split(",")
-
-
-
-#repeat...
-
-fig = plt.figure()
-size = 100
-plt.plot(np.random.randint(0,10,size=(size,)))
-plt.xlabel("Number of episodes")
-plt.ylabel("Mean Reward")
-
-pickle.dump(fig, open(trained_path + model_name +".pickle", "wb"))
-
-#open graphic
-fig_handle = pickle.load(open(trained_path + model_name+".pickle",'rb'))
-fig_handle.show()
-
+print(r)

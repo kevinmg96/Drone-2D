@@ -14,97 +14,31 @@ import rps.Modules.mobileagent as mobileagent
 
 class Robotarium(RobotariumABC):
 
-        def __init__(self,boundaries, number_of_robots=-1, show_figure=True, sim_in_real_time = True, initial_conditions=np.array([])):
-            super().__init__(boundaries,number_of_robots, show_figure, sim_in_real_time, initial_conditions)
+        def __init__(self,boundaries,initial_conditions,show_figure=True, sim_in_real_time = True,**kwargs):
+            super().__init__(boundaries,initial_conditions, show_figure, sim_in_real_time,
+            Rc = kwargs["Rc"],FaceColor = kwargs["FaceColor"], PoseGu = kwargs["PoseGu"], GuRadius = kwargs["GuRadius"], 
+            GuColorList = kwargs["GuColorList"],
+            PlotDataRate = kwargs["PlotDataRate"], MaxGuDist = kwargs["MaxGuDist"],MaxGuData = kwargs["MaxGuData"],
+            StepGuData = kwargs["StepGuData"])
 
             #Initialize some rendering variables
             self.previous_render_time = time.time()
             self.sim_in_real_time = sim_in_real_time
 
-            #Initialize checks for step and get poses calls
-            self._called_step_already = True
-            self._checked_poses_already = False
-
-            #Initialization of error collection.
-            self._errors = {}
-
-            #Initialize steps
-            self._iterations = 0 
         
-        def get_poses(self):
-            """Returns the states of the agents.
-
-            -> 3xN numpy array (of robot poses)
-            """
-
-            #assert(not self._checked_poses_already), "Can only call get_poses() once per call of step()."
-            # Allow step() to be called again.
-            self._called_step_already = False
-            self._checked_poses_already = True 
-
-            return self.poses
-
-        def call_at_scripts_end(self):
-
-            """Call this function at the end of scripts to display potentail errors.  
-            Even if you don't want to print the errors, calling this function at the
-            end of your script will enable execution on the Robotarium testbed.
-            """
-            print('##### DEBUG OUTPUT #####')
-            print('Your simulation will take approximately {0} real seconds when deployed on the Robotarium. \n'.format(math.ceil(self._iterations*0.033)))
-            # TODO: check collision string and boundary string
-            if bool(self._errors):
-                if "boundary" in self._errors:
-                    boundary_violations = max(self._errors["boundary"].values())
-                    print('\t Simulation had {0} {1}\n'.format(boundary_violations, self._errors["boundary_string"]))
-                if "collision" in self._errors:
-                    collision_violations = max(self._errors["collision"].values())
-                    print('\t Simulation had {0} {1}\n'.format(collision_violations, self._errors["collision_string"]))
-                if "actuator" in self._errors:
-                    print('\t Simulation had {0} {1}'.format(self._errors["actuator"], self._errors["actuator_string"]))
-            else:
-                print('No errors in your simulation! Acceptance of your experiment is likely!')
-
-            return
-
-        def step_v2(self,obj_list_gus,obj_drone_list,bool_robot = False,bool_debug = False):
+        def step_v2(self,bool_robot = False,bool_debug = False):
             """Increments the simulation by updating the dynamics.
             actualizacion fecha: 21/08/2023.
             esta funcion actualizara la pose de robots y gus
             """
-            #assert(not self._called_step_already), "Make sure to call get_poses before calling step() again."
-            
-            # Allow get_poses function to be called again.
-            self._called_step_already = True
-            self._checked_poses_already = False
-
-            # Validate before thresholding velocities
-            #self._errors = self._validate()
-            self._iterations += 1
-
-
-            # Update dynamics of agents robots
+ 
+            # Update dynamics of agents robots and gus
             if bool_robot:
-                self.poses[0, :] = self.poses[0, :] + self.time_step*np.cos(self.poses[2,:])*self.velocities[0, :]
-                self.poses[1, :] = self.poses[1, :] + self.time_step*np.sin(self.poses[2,:])*self.velocities[0, :]
-                self.poses[2, :] = self.poses[2, :] + self.time_step*self.velocities[1, :]
+                self.obj_drones.set_drone_poses(self.time_step)
                 
-                # Ensure angles are wrapped
-                self.poses[2, :] = np.arctan2(np.sin(self.poses[2, :]), np.cos(self.poses[2, :]))
-
-                #update pose in obj drones
-                mobileagent.MobileAgent.set_drone_poses(obj_drone_list,self.poses)
             else:
-                # Update dynamics of agents gus
-                self.poses_gus[0, :] = self.poses_gus[0, :] + self.time_step*np.cos(self.poses_gus[2,:])*self.velocities_gus[0, :]
-                self.poses_gus[1, :] = self.poses_gus[1, :] + self.time_step*np.sin(self.poses_gus[2,:])*self.velocities_gus[0, :]
-                self.poses_gus[2, :] = self.poses_gus[2, :] + self.time_step*self.velocities_gus[1, :]            
-
-                self.poses_gus[2, :] = np.arctan2(np.sin(self.poses_gus[2, :]), np.cos(self.poses_gus[2, :]))
-
-                #update dynamics of gus objs
-                gu.GroundUser.set_gu_poses(obj_list_gus,self.poses_gus)
-
+                self.obj_gus.set_gu_poses(self.time_step)
+            
             # Update graphics
             if(self.show_figure):
                 if(self.sim_in_real_time):
@@ -116,36 +50,31 @@ class Robotarium(RobotariumABC):
                 if bool_robot:
 
                     for i in range(self.number_of_robots):
-                        # self.chassis_patches[i].xy = self.poses[:2, i] + self.robot_radius*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                        # if i == 0:
-                        #     print(self.poses[2, i] - math.pi/2)
-                        #     print('='*50)
-
-                        # self.chassis_patches[i].xy = self.poses[:2, i] + np.array(-self.robot_width/2 * np.sin(self.poses[2, i] + math.pi/2), self.robot_length/2 * np.cos(self.poses[2,i] + math.pi/2))
-                        self.chassis_patches[i].xy = self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]+math.pi/2), np.sin(self.poses[2, i]+math.pi/2)))+\
-                                                0.04*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2)))  + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                        # self.chassis_patches[i].orientation = self.poses[2, i] + math.pi/4
-                        self.chassis_patches[i].angle = (self.poses[2, i] - math.pi/2) * 180/math.pi
-
-                        self.right_wheel_patches[i].center = self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]+math.pi/2), np.sin(self.poses[2, i]+math.pi/2)))+\
-                                                0.04*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2)))  + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                        self.right_wheel_patches[i].orientation = self.poses[2, i] + math.pi/4
-
-                        self.left_wheel_patches[i].center = self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]-math.pi/2), np.sin(self.poses[2, i]-math.pi/2)))+\
-                                                0.04*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                        self.left_wheel_patches[i].orientation = self.poses[2,i] + math.pi/4
                         
-                        self.right_led_patches[i].center = self.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.poses[2,i]), np.sin(self.poses[2,i])))-\
-                                        0.04*np.array((-np.sin(self.poses[2, i]), np.cos(self.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                        self.left_led_patches[i].center = self.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.poses[2,i]), np.sin(self.poses[2,i])))-\
-                                        0.015*np.array((-np.sin(self.poses[2, i]), np.cos(self.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
+                        self.chassis_patches[i].xy = self.obj_drones.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]+math.pi/2), np.sin(self.obj_drones.poses[2, i]+math.pi/2)))+\
+                                                0.04*np.array((-np.sin(self.obj_drones.poses[2, i]+math.pi/2), np.cos(self.obj_drones.poses[2, i]+math.pi/2)))  + self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]), np.sin(self.obj_drones.poses[2, i])))
+  
+                        self.chassis_patches[i].angle = (self.obj_drones.poses[2, i] - math.pi/2) * 180/math.pi
+
+                        self.right_wheel_patches[i].center = self.obj_drones.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]+math.pi/2), np.sin(self.obj_drones.poses[2, i]+math.pi/2)))+\
+                                                0.04*np.array((-np.sin(self.obj_drones.poses[2, i]+math.pi/2), np.cos(self.obj_drones.poses[2, i]+math.pi/2)))  + self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]), np.sin(self.obj_drones.poses[2, i])))
+                        self.right_wheel_patches[i].orientation = self.obj_drones.poses[2, i] + math.pi/4
+
+                        self.left_wheel_patches[i].center = self.obj_drones.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]-math.pi/2), np.sin(self.obj_drones.poses[2, i]-math.pi/2)))+\
+                                                0.04*np.array((-np.sin(self.obj_drones.poses[2, i]+math.pi/2), np.cos(self.obj_drones.poses[2, i]+math.pi/2))) + self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]), np.sin(self.obj_drones.poses[2, i])))
+                        self.left_wheel_patches[i].orientation = self.obj_drones.poses[2,i] + math.pi/4
+                        
+                        self.right_led_patches[i].center = self.obj_drones.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2,i]), np.sin(self.obj_drones.poses[2,i])))-\
+                                        0.04*np.array((-np.sin(self.obj_drones.poses[2, i]), np.cos(self.obj_drones.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]), np.sin(self.obj_drones.poses[2, i])))
+                        self.left_led_patches[i].center = self.obj_drones.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2,i]), np.sin(self.obj_drones.poses[2,i])))-\
+                                        0.015*np.array((-np.sin(self.obj_drones.poses[2, i]), np.cos(self.obj_drones.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]), np.sin(self.obj_drones.poses[2, i])))
                         # self.base_patches[i].center = self.poses[:2, i]
 
                         #update center mobileagent rc
-                        self.robots_rc_circles[i].center = self.poses[:2, i]
+                        self.robots_rc_circles[i].center = self.obj_drones.poses[:2, i]
                 else:
-                    for i in range(self.poses_gus.shape[1]):
-                        self.gu_patches[i].center = self.poses_gus[:2, i]
+                    for i in range(self.obj_gus.poses.shape[1]):
+                        self.gu_patches[i].center = self.obj_gus.poses[:2, i]
 
                         #update center gu transmission rate textbox
                         self.gu_tb_data[i].set_position(self.gu_patches[i].center)
@@ -158,62 +87,5 @@ class Robotarium(RobotariumABC):
                 self.figure.canvas.draw_idle()
                 self.figure.canvas.flush_events()
 
-        def step(self):
-            """Increments the simulation by updating the dynamics.
-            """
-            #assert(not self._called_step_already), "Make sure to call get_poses before calling step() again."
-            
-            # Allow get_poses function to be called again.
-            self._called_step_already = True
-            self._checked_poses_already = False
 
-            # Validate before thresholding velocities
-            self._errors = self._validate()
-            self._iterations += 1
-
-
-            # Update dynamics of agents
-            self.poses[0, :] = self.poses[0, :] + self.time_step*np.cos(self.poses[2,:])*self.velocities[0, :]
-            self.poses[1, :] = self.poses[1, :] + self.time_step*np.sin(self.poses[2,:])*self.velocities[0, :]
-            self.poses[2, :] = self.poses[2, :] + self.time_step*self.velocities[1, :]
-            # Ensure angles are wrapped
-            self.poses[2, :] = np.arctan2(np.sin(self.poses[2, :]), np.cos(self.poses[2, :]))
-
-            # Update graphics
-            if(self.show_figure):
-                if(self.sim_in_real_time):
-                    t = time.time()
-                    while(t - self.previous_render_time < self.time_step):
-                        t=time.time()
-                    self.previous_render_time = t
-
-                for i in range(self.number_of_robots):
-                    # self.chassis_patches[i].xy = self.poses[:2, i] + self.robot_radius*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                    # if i == 0:
-                    #     print(self.poses[2, i] - math.pi/2)
-                    #     print('='*50)
-
-                    # self.chassis_patches[i].xy = self.poses[:2, i] + np.array(-self.robot_width/2 * np.sin(self.poses[2, i] + math.pi/2), self.robot_length/2 * np.cos(self.poses[2,i] + math.pi/2))
-                    self.chassis_patches[i].xy = self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]+math.pi/2), np.sin(self.poses[2, i]+math.pi/2)))+\
-                                            0.04*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2)))  + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                    # self.chassis_patches[i].orientation = self.poses[2, i] + math.pi/4
-                    self.chassis_patches[i].angle = (self.poses[2, i] - math.pi/2) * 180/math.pi
-
-                    self.right_wheel_patches[i].center = self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]+math.pi/2), np.sin(self.poses[2, i]+math.pi/2)))+\
-                                            0.04*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2)))  + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                    self.right_wheel_patches[i].orientation = self.poses[2, i] + math.pi/4
-
-                    self.left_wheel_patches[i].center = self.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.poses[2, i]-math.pi/2), np.sin(self.poses[2, i]-math.pi/2)))+\
-                                            0.04*np.array((-np.sin(self.poses[2, i]+math.pi/2), np.cos(self.poses[2, i]+math.pi/2))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                    self.left_wheel_patches[i].orientation = self.poses[2,i] + math.pi/4
-                    
-                    self.right_led_patches[i].center = self.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.poses[2,i]), np.sin(self.poses[2,i])))-\
-                                    0.04*np.array((-np.sin(self.poses[2, i]), np.cos(self.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                    self.left_led_patches[i].center = self.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.poses[2,i]), np.sin(self.poses[2,i])))-\
-                                    0.015*np.array((-np.sin(self.poses[2, i]), np.cos(self.poses[2, i]))) + self.robot_length/2*np.array((np.cos(self.poses[2, i]), np.sin(self.poses[2, i])))
-                    # self.base_patches[i].center = self.poses[:2, i]
-                    
-
-                self.figure.canvas.draw_idle()
-                self.figure.canvas.flush_events()
 
