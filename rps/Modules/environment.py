@@ -48,8 +48,8 @@ class environment(robotarium.Robotarium):
 
                 # Iterate the simulation
                 self.step_v2(True)
-            else: # if training, the next drone positions will be automatically used to update drones pose
-                self.obj_drones.poses[:2,:] = drone_next_pos
+        else: # if training, the next drone positions will be automatically used to update drones pose
+            self.obj_drones.poses[:2,0] = drone_next_pos
 
         #actualizamos los registros del drone...
         self.obj_drones.echoRadio(self.obj_gus)
@@ -134,8 +134,12 @@ class environment(robotarium.Robotarium):
         """
         conec_1 = float(self.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
         conec_2 = float(self.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = self.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = self.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
         trans_rate_tot = self.obj_gus.transmission_rate[0] + self.obj_gus.transmission_rate[1] + 1e-6
-        return conec_1 * (self.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 * (self.obj_gus.transmission_rate[1]/trans_rate_tot)
+        return (self.obj_gus.transmission_rate[0]/trans_rate_tot) * ((self.obj_drones.rc - dis_1) / self.obj_drones.rc) +\
+        (self.obj_gus.transmission_rate[1]/trans_rate_tot) * ((self.obj_drones.rc - dis_2) / self.obj_drones.rc)
+        #return conec_1 * (self.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 * (self.obj_gus.transmission_rate[1]/trans_rate_tot)
 
     def getState(self):
         """
