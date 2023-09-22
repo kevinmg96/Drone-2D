@@ -33,7 +33,7 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
-show_figure = False
+show_figure = True
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
@@ -116,8 +116,10 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
 obj_process_mob_trans_gu.setStopProcess()
 
-pretrained_model_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Pretrained/DQN single agent-objective/05_09_2023/model 1 v2/"
-pretrained_model_filename = "model_1_v2--30.keras"
+
+
+pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
+pretrained_model_filename = "model_1_v2--9.keras"
 #load model test...
 num_episodes = 1500
 batch_size = 700
@@ -125,18 +127,18 @@ train_max_iter = 150
 save_interval_premodel = 3500
 memory_capacity = 6000
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
+                         save_interval_premodel,pretrained_model_path + pretrained_model_filename)
 
-pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v1/"
-pretrained_name = "model_1_v1"
-pretrained_data_filename = "model_1_v1_data"
+pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
+pretrained_name = "model_1_v2"
+pretrained_data_filename = "model_1_v2_data"
 
 dqn_agent.trainingEpisodes(r,obj_process_mob_trans_gu,pretrained_path,
                            pretrained_name,pretrained_data_filename,bool_debug=True,
                            PositionController = unicycle_position_controller  )
 
-trained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-objective/13_09_2023/model 1 v1/"
-model_name = "model_1_v1"
+trained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-objective/13_09_2023/model 1 v2/"
+model_name = "model_1_v2"
 DQN.save_model(dqn_agent.q_network,trained_path + model_name + ".keras")
 
 print("saving mean reward history last episodes...")

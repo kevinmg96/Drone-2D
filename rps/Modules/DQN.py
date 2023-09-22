@@ -101,15 +101,18 @@ def save_pretrained_model(model,folder_path,filename):
 
 def load_info_data(full_data_path):
     data_file =  open(full_data_path, "r") 
-    return ((data_file.read()).split(",")).pop()
+    data_stream = data_file.read()
+    data_split = data_stream.split(",")
+    data_split.pop()
+    data_array = np.array(data_split,dtype=float)
+    return data_array
 
 def plot_rewards(data):
     fig = plt.figure()
-    plt.plot(np.arange(start =1 , stop = len(data) + 1), data)
+    plt.scatter(np.arange(start =1 , stop = len(data) + 1), data)
     plt.xlabel("Number of episodes")
     plt.ylabel("Mean Reward")
     plt.show()
-
 
 #-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
 
