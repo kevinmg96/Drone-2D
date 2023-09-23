@@ -84,7 +84,7 @@ r = environment.environment(boundaries,initial_conditions=initial_conditions,sho
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 state_dimension = 6
-gamma = 1
+gamma = 0.995
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
@@ -121,11 +121,11 @@ obj_process_mob_trans_gu.setStopProcess()
 pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
 pretrained_model_filename = "model_1_v2--9.keras"
 #load model test...
-num_episodes = 1500
-batch_size = 700
-train_max_iter = 150
-save_interval_premodel = 3500
-memory_capacity = 6000
+num_episodes = 500
+batch_size = 300
+train_max_iter = 300
+save_interval_premodel = 1000
+memory_capacity = 3500
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
                          save_interval_premodel,pretrained_model_path + pretrained_model_filename)
 

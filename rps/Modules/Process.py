@@ -55,7 +55,12 @@ class ProcesGuMobility:
                                               misc.gaussianChoice(r.obj_gus.max_gu_dist)]
                     p_distribution = [0.35,0.5,0.15]
                     next_dist_gu = np.random.choice(next_disp_distribution,p=p_distribution)
-                    goal_points_gus[:2,i] = misc.computeNextPosition(next_dist_gu,x_gus[:2,i]) 
+                    next_possible_pos_gu = misc.computeNextPosition(next_dist_gu,x_gus[:2,i]).reshape(-1,1) 
+                    if r.isTerminalState(next_possible_pos_gu): #keep current position
+                        goal_points_gus[:2,i] = x_gus[:2,i]
+                    else: #take next gu position
+                        goal_points_gus[:2,i] = next_possible_pos_gu[:,0]
+                        
                 else:
                     #keep current position
                     goal_points_gus[:2,i] = x_gus[:2,i]

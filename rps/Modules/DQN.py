@@ -234,11 +234,8 @@ class DQNAgent:
             
             is_next_state_terminal = False
 
-            while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
-                self.counter_train_timeslot += 1
-                if self.counter_train_timeslot >self.timeslot_train_iter_max: #salimos del inner loop. cambiamos a otro ep
-                    break
-                
+            while self.counter_train_timeslot < self.timeslot_train_iter_max: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
+ 
 
                 #seleccionamos accion para agente de acuerdo a e greedy strategy
                 index_action, action = self.selectAction(current_state)
@@ -257,7 +254,7 @@ class DQNAgent:
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
                     self.trainNetwork()
 
-                    #save pretrained model and save a text file with mean episode rewards
+                    #save pretrained model and save a text file with episode rewards
                     if not folder_pretrained_model == "":
                         self.counter_iter += 1
                         if self.counter_iter > self.pretrained_iter_saver:
@@ -283,8 +280,11 @@ class DQNAgent:
                 env.obj_drones.echoRadio(env.obj_gus)   
 
                 #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
-                if env.isTerminalState():
-                    break            
+                drone_gu_pose = np.concatenate([env.obj_drones.poses,env.obj_gus.poses],axis = 1)
+                if env.isTerminalState(drone_gu_pose):
+                    break
+
+                self.counter_train_timeslot += 1            
                 
             if bool_debug:
                 print("mean rewards : {},episode : {}, num. iterations: {}".format(np.mean(rewards_per_episode), i,
@@ -368,13 +368,13 @@ class DQNAgent:
 
         #soft update of the target network parameters to get into the q network parameters  
          # θ′ ← τ θ + (1 −τ )θ′ 
-        #soft_update(self.target_network,self.q_network,self.tau)
+        soft_update(self.target_network,self.q_network,self.tau)
 
         #update the target networks if counter == update interval
-        self.counter_update_target_network += 1
-        if self.counter_update_target_network == self.target_network_update_interval:
-            self.target_network.set_weights(self.q_network.get_weights())
-            self.counter_update_target_network = 0
+        #self.counter_update_target_network += 1
+        #if self.counter_update_target_network == self.target_network_update_interval:
+        #    self.target_network.set_weights(self.q_network.get_weights())
+        #    self.counter_update_target_network = 0
 
 
              

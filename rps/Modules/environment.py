@@ -57,7 +57,9 @@ class environment(robotarium.Robotarium):
         #return the transition tuple -> next_state,reward,is_next_state_terminal
         reward = self.getReward()
         next_state = self.getState()
-        is_next_state_terminal = self.isTerminalState()
+
+        drone_gu_pose = np.concatenate([self.obj_drones.poses,self.obj_gus.poses],axis = 1)
+        is_next_state_terminal = self.isTerminalState(drone_gu_pose)
         return next_state,reward,is_next_state_terminal
 
     def resetEnv(self,factor_gu_out_rc = 1.35):
@@ -113,18 +115,18 @@ class environment(robotarium.Robotarium):
         self.reset_env = False
 
 
-    def isTerminalState(self,tolerance = 0.01):
+    def isTerminalState(self,array_poses,tolerance = 0.01):
         """
         esta funcion evaluara si el estado actual del ambiente es terminal.
         por el momento el estado terminal sera si el drone navega fuera de los limites del espacio 2d o
         algun gu navega fuera del ambiente
         """
-        drone_gu_pose = np.concatenate([self.obj_drones.poses,self.obj_gus.poses],axis = 1)
+        #drone_gu_pose = np.concatenate([self.obj_drones.poses,self.obj_gus.poses],axis = 1)
 
-        c_1 = (drone_gu_pose[0,:] > self.boundaries[2]).any()
-        c_2 = (drone_gu_pose[0,:] < self.boundaries[0]).any()
-        c_3 = (drone_gu_pose[1,:] > self.boundaries[3]).any()
-        c_4 = (drone_gu_pose[1,:] < self.boundaries[1]).any()
+        c_1 = (array_poses[0,:] > self.boundaries[2]).any()
+        c_2 = (array_poses[0,:] < self.boundaries[0]).any()
+        c_3 = (array_poses[1,:] > self.boundaries[3]).any()
+        c_4 = (array_poses[1,:] < self.boundaries[1]).any()
         return np.where(c_1 or c_2 or c_3 or c_4,True,False)
 
     def getReward(self):
