@@ -41,6 +41,7 @@ from rps.utilities.misc import *
 import glob
 import os
 import re
+import time
 
 Transition = namedtuple('Transition',
                         ('state', 'action','reward','next_state', "is_terminal"))
@@ -111,7 +112,7 @@ def plot_rewards(data):
     fig = plt.figure()
     plt.scatter(np.arange(start =1 , stop = len(data) + 1), data)
     plt.xlabel("Number of episodes")
-    plt.ylabel("Mean Reward")
+    plt.ylabel("Reward")
     plt.show()
 
 #-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
@@ -142,7 +143,7 @@ class DQNAgent:
         self.target_network_update_interval = target_network_update_interval 
 
         #mean de las recompensas por episodio
-        self.meanRewardsEpisode = "" # change methodology to save it in string format[]
+        self.RewardsEpisode = "" # change methodology to save it in string format[]
 
         #create q network NN model
         self.loss_function = self.my_loss_fn
@@ -225,6 +226,15 @@ class DQNAgent:
 
             #reseteamos el ambiente, al inicio de cada episodio...           
             env.resetEnv()
+
+            #set transmission rate for each gu...
+            #actualizamos estatus data tranmission y rate de los gus
+            for k in range(env.obj_gus.poses.shape[1]):
+                env.obj_gus.setTransmissionRate(env.obj_gus.max_gu_data,False)
+                    
+                #actualizamos data transmission value en ambiente
+                if env.show_figure:
+                    env.updateGUDataRate(k,env.obj_gus.transmission_rate[k])
            
             #actualizamos los registros del drone...
             env.obj_drones.echoRadio(env.obj_gus)
@@ -241,9 +251,14 @@ class DQNAgent:
                 index_action, action = self.selectAction(current_state)
 
                 #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-                next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"])
-                rewards_per_episode.append(reward)
+                next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
+                args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
 
+                #if gus in terminal state
+                if is_next_state_terminal:
+                    break
+
+                rewards_per_episode.append(reward)
 
                 #store the transition tuple...
                 self.memoryBuffer.push(current_state,(index_action, action),reward,next_state,is_next_state_terminal)
@@ -263,33 +278,21 @@ class DQNAgent:
 
                             #mean episode rewards save
                             with open(folder_pretrained_model + info_data_file + ".txt","a+") as f:
-                                f.write(self.meanRewardsEpisode)
-                                self.meanRewardsEpisode = ""
-
-                if is_next_state_terminal: #if next state is terminal, then finish the training episode and restart the process...
-                    #update exploration probability...
-                    self.update_exploration_probability()
-                    break
-
+                                f.write(self.RewardsEpisode)
+                                self.RewardsEpisode = ""
+                
                 current_state = next_state
                 
-                # ejecutamos acciones de los gus
-                obj_process_mob_trans_gu.guProcess(env,args["PositionController"],at_pose,False)
+                self.counter_train_timeslot += 1   
+  
 
-                #actualizamos los registros del drone...
-                env.obj_drones.echoRadio(env.obj_gus)   
-
-                #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
-                drone_gu_pose = np.concatenate([env.obj_drones.poses,env.obj_gus.poses],axis = 1)
-                if env.isTerminalState(drone_gu_pose):
-                    break
-
-                self.counter_train_timeslot += 1            
+            #update exploration probability...
+            self.update_exploration_probability() 
                 
             if bool_debug:
-                print("mean rewards : {},episode : {}, num. iterations: {}".format(np.mean(rewards_per_episode), i,
+                print("Rewards : {},episode : {}, num. iterations: {}".format(np.sum(rewards_per_episode), i,
                                                                                    self.counter_train_timeslot))        
-            self.meanRewardsEpisode += str(np.round(np.mean(rewards_per_episode),3)) + ","
+            self.RewardsEpisode += str(np.round(np.sum(rewards_per_episode),3)) + ","
 
             self.counter_train_timeslot = 0
 

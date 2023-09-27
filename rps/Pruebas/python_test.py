@@ -17,3 +17,23 @@ c_4 = (w[1,:] < boundaries[1]).any()
 r = np.where(c_1 or c_2 or c_3 or c_4,True,False)
 
 print(r)
+
+bool_new_direction = np.ones([5,]).astype(bool) 
+print(bool_new_direction)
+
+class parent:
+    def __init__(self,**kwargs) -> None:
+        print("hey")
+        self.rand_num = kwargs["RandNum"]
+        self.bool_test = kwargs["Bool"]
+    def print_data(self):
+        print(self.rand_num,self.bool_test)
+class child(parent):
+    def __init__(self,**kwargs) -> None:
+        super().__init__(**kwargs)
+
+c = child(RandNum = 10,Bool = True)
+c.print_data()
+
+
+        

@@ -30,6 +30,8 @@ class GroundUser:
         self.max_gu_dist = max_gu_dist
         self.max_gu_data = max_gu_data #transmission rate
         self.step_gu_data = step_gu_data
+        self.bool_new_direction = np.ones([len(self.ids),]).astype(bool) 
+        self.curr_direction = [None for _ in range(len(self.ids))]
         
 
     def setDistanceToDrone(self,drone_pose):
@@ -48,13 +50,13 @@ class GroundUser:
         """
 
         for i in range(len(self.ids)):
-            self.is_gu_transmiting[i] = np.where(misc.poissonChoice(1.0,5) < 0.6,True,False)#misc.moveObjNextStep()
+            self.is_gu_transmiting[i] = np.where(misc.poissonChoice(1.0,5) < 0.65,True,False)#misc.moveObjNextStep()
 
             if self.is_gu_transmiting[i]: #gu quiere continuar o empezar a transmitir data
                 if np.abs(self.transmission_rate[i]) < 0.001: #gu no ha empezado a transmitir ninguna data
                     self.transmission_rate[i] = misc.randomChoice(g_x) 
                 else: #data esta siendo transmitida, agregaremos o decremetnaremos valor por un step
-                    if misc.moveObjNextStep(): #actualizaremos data rate
+                    if np.where(misc.poissonChoice(1.0,5) < 0.5,True,False): #actualizaremos data rate
                         temp_rate = self.transmission_rate[i] + np.where(misc.moveObjNextStep(),1,-1) * self.step_gu_data
                         if not(temp_rate > self.max_gu_data or temp_rate < 0.0):
                             self.transmission_rate[i] = temp_rate

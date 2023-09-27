@@ -43,12 +43,13 @@ debido a data rates de los gus muy proximos, no logra decidir seguir al correcto
 
 propuestas actualizacion algoritmo dqn y modelado del ambiente:
 1.- cambiare la manera de finalizar el episodio de entrenamiento. ahora seran cierto numero de iteraciones, ademas los gus predeciran si su nueva posicion se encuentra fuera del rango, 
-si es asi, entonces no tomara esa posicion en este timeslot.
+si es asi, entonces no tomara esa posicion en este timeslot. listo y verificado
 1.1 probare cambiando la distribucion de los drones y gus. gus seran distribuidos aleatoriamente en el terreno ( o colocados en el rango rc) una probabilidad lo decidira. el drone,
-conociendo posicion gus y su distancai relativa, se movera en el timeslot a cubrir alguno o ambos de los drones.
+conociendo posicion gus y su distancai relativa, se movera en el timeslot a cubrir alguno o ambos de los drones. listo.
 2- reward function cambio, si el drone tomara una posicion fuera del target area, agregara una penalizacion, pero no tomara esa posicion.
-3.- probare con entrenamientos con menos episodiso y vere si el algoritmo esta aprendiendo.
-4.- probare con gama menor a 1 para ver si variar el peso de rewards futuros, evita que el drone sobre estime buenas decisiones, provocando que tome decisiones incorrectas precipitadamente
-5.- aplicar observacion 2 en prueba 13_09_2023
-6.-reestructurar reward function
-7.- state space: incluir drone position, gus positions,
+listo
+3.- probare con entrenamientos con menos episodiso y vere si el algoritmo esta aprendiendo. listo, falta probar
+4.- probare con gama menor a 1 para ver si variar el peso de rewards futuros, evita que el drone sobre estime buenas decisiones, provocando que tome decisiones incorrectas precipitadamente. listo, falta probar
+5.- aplicar observacion 1 en prueba 13_09_2023. listo
+6.-reestructurar reward function. listo
+7.- state space: incluir drone position, gus positions,listo

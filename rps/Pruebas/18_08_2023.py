@@ -27,13 +27,54 @@ import threading
 import itertools
 import pickle
 
+def rewardFunc(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
+                            trans_rate_tot)
+
+        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
+
+        reward = weight_dr * sum_dr + weight_dis * sum_dis
+        return reward
+
+
+
+def rewardFunc2(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_conec = conec_1 + conec_2
+
+
+        sum_dr = (env.obj_gus.transmission_rate[0]/trans_rate_tot) + (env.obj_gus.transmission_rate[1]/trans_rate_tot)
+
+        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
+        reward = sum_conec + weight_dr * sum_dr + weight_dis * sum_dis
+
+        return reward
+
+
+#-------------------------------------------------------------------------------------------
+
+
+
+
+
 # Instantiate Robotarium object
 
 initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.25; 0.2 0.5 0.75 1.0 1.25; 0 0 0 0 0'))
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
-show_figure = True
+show_figure = False
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
@@ -86,6 +127,11 @@ r = environment.environment(boundaries,initial_conditions=initial_conditions,sho
 state_dimension = 6
 gamma = 0.995
 
+#reward characteristics...
+weight_data_rate = 2.5
+weight_rel_dist = 0.3
+penalize_drone_out_range = 1
+
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
 # Define goal points by removing orientation from poses
@@ -121,13 +167,13 @@ obj_process_mob_trans_gu.setStopProcess()
 pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
 pretrained_model_filename = "model_1_v2--9.keras"
 #load model test...
-num_episodes = 500
-batch_size = 300
-train_max_iter = 300
+num_episodes = 300
+batch_size = 400
+train_max_iter = 200
 save_interval_premodel = 1000
 memory_capacity = 3500
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel,pretrained_model_path + pretrained_model_filename)
+                         save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
 
 pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
 pretrained_name = "model_1_v2"
@@ -135,13 +181,17 @@ pretrained_data_filename = "model_1_v2_data"
 
 dqn_agent.trainingEpisodes(r,obj_process_mob_trans_gu,pretrained_path,
                            pretrained_name,pretrained_data_filename,bool_debug=True,
-                           PositionController = unicycle_position_controller  )
+                           PositionController = unicycle_position_controller,
+                            RewardFunc = rewardFunc,
+                            WeightDataRate = weight_data_rate,
+                            WeightRelDist = weight_rel_dist,
+                            PenalDroneOutRange = penalize_drone_out_range )
 
 trained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-objective/13_09_2023/model 1 v2/"
 model_name = "model_1_v2"
 DQN.save_model(dqn_agent.q_network,trained_path + model_name + ".keras")
 
-print("saving mean reward history last episodes...")
+print("saving reward history last episodes...")
 
 with open(pretrained_path + pretrained_data_filename + ".txt","a+") as f:
     f.write(dqn_agent.meanRewardsEpisode)

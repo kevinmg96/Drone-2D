@@ -109,7 +109,7 @@ def computeNextPosition(next_mag,pos,direction = 2 * np.pi,bool_pos_gu = True,bo
     if bool_debug:
         print("new pos : {}".format(new_pos))
 
-    return new_pos
+    return new_pos,dir
 
 if __name__ == "__main__":
     max_distance = 5.0

@@ -47,26 +47,48 @@ class ProcesGuMobility:
 
             #indicate if gu needs updating position.
             for i in range(num_gus):
-                if np.where(misc.poissonChoice(1.0,5) < 0.5,True,False):#misc.moveObjNextStep():
-                    #update gu position
+                #get next magnitude displacement probability distribution
+                next_disp_distribution = [misc.randomChoice(r.obj_gus.max_gu_dist),misc.poissonChoice(r.obj_gus.max_gu_dist),
+                                        misc.gaussianChoice(r.obj_gus.max_gu_dist)]
+                p_distribution = [0.35,0.5,0.15]
+                next_dist_gu = np.random.choice(next_disp_distribution,p=p_distribution) 
+                              
+                if bool_debug:
+                    print("GU : {}, new direction ? : {}".format(r.obj_gus.ids[i],r.obj_gus.bool_new_direction[i] ))
 
-                    #get next magnitude displacement probability distribution
-                    next_disp_distribution = [misc.randomChoice(r.obj_gus.max_gu_dist),misc.poissonChoice(r.obj_gus.max_gu_dist),
-                                              misc.gaussianChoice(r.obj_gus.max_gu_dist)]
-                    p_distribution = [0.35,0.5,0.15]
-                    next_dist_gu = np.random.choice(next_disp_distribution,p=p_distribution)
-                    next_possible_pos_gu = misc.computeNextPosition(next_dist_gu,x_gus[:2,i]).reshape(-1,1) 
-                    if r.isTerminalState(next_possible_pos_gu): #keep current position
-                        goal_points_gus[:2,i] = x_gus[:2,i]
-                    else: #take next gu position
-                        goal_points_gus[:2,i] = next_possible_pos_gu[:,0]
-                        
+                if r.obj_gus.bool_new_direction[i]:
+
+                    #set new random position to displace gu             
+                    next_possible_pos_gu,gu_direction = misc.computeNextPosition(next_dist_gu,x_gus[:2,i])
+                    next_possible_pos_gu = next_possible_pos_gu.reshape(-1,1)
+                    r.obj_gus.curr_direction[i] = gu_direction 
                 else:
-                    #keep current position
-                    goal_points_gus[:2,i] = x_gus[:2,i]
+                    #continue pursuing same direction...
+                    next_possible_pos_gu,_ = misc.computeNextPosition(next_dist_gu,x_gus[:2,i],
+                    r.obj_gus.curr_direction[i],False)
+                    next_possible_pos_gu = next_possible_pos_gu.reshape(-1,1)
+
+                terminal_state = r.isTerminalState(next_possible_pos_gu)
 
                 if bool_debug:
-                    print("GU : {}, new position: {}".format(r.obj_gus.ids[i],goal_points_gus[:2,i]))
+                    print("GU : {}, next possible position : {}".format(r.obj_gus.ids[i],next_possible_pos_gu ))
+                    print("is terminal state ?: {}".format(terminal_state))
+                
+                if terminal_state: #keep current position
+                    goal_points_gus[:,i] = x_gus[:,i]
+                else: #take next gu position
+                    goal_points_gus[:2,i] = next_possible_pos_gu[:,0]               
+                
+                if bool_debug:
+                    print("GU : {}, final next position: {}".format(r.obj_gus.ids[i],goal_points_gus[:2,i]))
+
+                #set bool_new_direction for next possible gus position based on a distribution of probabilities
+                bool_new_direction_distribution = [misc.randomChoice(1.0),misc.poissonChoice(1.0,5),
+                misc.gaussianChoice(1.0)]
+                p_distribution = [0.1,0.8,0.1]
+                bool_new_direction_sel = np.random.choice(bool_new_direction_distribution,p=p_distribution)
+
+                r.obj_gus.bool_new_direction[i] = np.where(bool_new_direction_sel < 0.6,False,True)
 
                 #actualizamos estatus data tranmission y rate de los gus
                 r.obj_gus.setTransmissionRate(r.obj_gus.max_gu_data,False)#misc.randomChoice(r.obj_gus.max_gu_data),False)
