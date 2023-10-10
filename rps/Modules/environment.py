@@ -58,9 +58,7 @@ class environment(robotarium.Robotarium):
 
             while (np.size(pose_eval(x_robots, goal_points_robots, position_error = 0.05, rotation_error=300)) != self.number_of_robots ):
 
-                # Get poses of agents
-                x_robots = self.obj_drones.poses
-
+            
                 # Create single-integrator control inputs for mobile agents and gus
                 dxu_robots = unicycle_position_controller(x_robots, goal_points_robots[:2][:])
 
@@ -69,6 +67,10 @@ class environment(robotarium.Robotarium):
 
                 # Iterate the simulation
                 self.step_v2(True)
+
+                # Get poses of agents
+                x_robots = self.obj_drones.poses
+
         else: # if training, the next drone positions will be automatically used to update drones pose
             self.obj_drones.poses[:2,0] = drone_next_pos
 
@@ -76,7 +78,7 @@ class environment(robotarium.Robotarium):
         self.obj_drones.echoRadio(self.obj_gus)
 
         #return the transition tuple -> next_state,reward,is_next_state_terminal
-        reward = self.getReward(reward_func,weight_dr,weight_dis,flag_drone_out_range,drone_boundaries_penalization,True)
+        reward = self.getReward(reward_func,weight_dr,weight_dis,flag_drone_out_range,drone_boundaries_penalization)
         next_state = self.getState()
 
         drone_gu_pose = np.concatenate([self.obj_drones.poses,self.obj_gus.poses],axis = 1)
