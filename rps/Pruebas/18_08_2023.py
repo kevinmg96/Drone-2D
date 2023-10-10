@@ -89,13 +89,14 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
-show_figure = False
+show_figure = True
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
 rc_color = "k"
-drone_disp_range = [0,0.35] #rango de movimiento permitido del drone
+disp_max = 0.35
 drone_disp_num  = 5#numero de divisiones en la accion displacement
+drone_disp_range = [disp_max/drone_disp_num,disp_max] #rango de movimiento permitido del drone
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
@@ -105,7 +106,10 @@ arr_drone_angle_values = np.linspace(drone_angle_range[0],drone_angle_range[1],n
 
 #cartesian product (displacement, direction):
 cartesian_action = np.array(list(itertools.product(arr_drone_disp_values,arr_drone_angle_values)))
-encode_action = np.arange(cartesian_action.shape[0])
+
+#append action hovering (mag : 0, angle : 0)
+cartesian_action = np.concatenate([cartesian_action,np.zeros([1,2])],axis = 0)
+
 
 #E-greedy policy
 prob_epsilon = 0.2
@@ -179,25 +183,25 @@ obj_process_mob_trans_gu.setStopProcess()
 
 
 
-pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/26_09_2023/model 3 v1/"
+pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/26_09_2023/model 1 v2/"
 pretrained_model_filename = "model_1_v2--51.keras"
 #load model test...
 num_episodes = 300
 batch_size = 400
-train_max_iter = 150
-save_interval_premodel = 10000
+train_max_iter = 3
+save_interval_premodel = 2 #number of past epochs required for saving a pretrained model
 memory_capacity = 4500
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
+                         save_interval_premodel)#,None,pretrained_model_path + pretrained_model_filename)
 
-pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/26_09_2023/model 3 v1/"
-pretrained_name = "model_3_v1"
-pretrained_data_filename = "model_3_v1_data"
+pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
+pretrained_name = "model_1_v1"
+pretrained_data_filename = "model_1_v1_data"
 
 dqn_agent.trainingEpisodes(r,obj_process_mob_trans_gu,pretrained_path,
                            pretrained_name,pretrained_data_filename,bool_debug=True,
                            PositionController = unicycle_position_controller,
-                            RewardFunc = rewardFunc3,
+                            RewardFunc = rewardFunc,
                             WeightDataRate = weight_data_rate,
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range )

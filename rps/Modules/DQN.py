@@ -22,7 +22,7 @@ import tensorflow
 from tensorflow import keras
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential,load_model
-from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import RMSprop,Adam
 from tensorflow import gather_nd
 from tensorflow.keras.losses import mean_squared_error
 
@@ -129,7 +129,7 @@ class DQNAgent:
         self.timeslot_train_iter_max = timeslot_train_iter_max
 
         #salvar el modelo preentrado cada cierto numero de iteraciones. parametro ingresado a la clase
-        self.counter_iter = 0
+        self.counter_iter = 1
         self.pretrained_iter_saver = pretrained_iter_saver
 
         self.gamma = gamma
@@ -164,7 +164,7 @@ class DQNAgent:
     
     def load_keras_model(self,model_full_path):
         self.q_network = load_model(model_full_path,compile=False)
-        self.q_network.compile(optimizer = RMSprop(), loss = self.loss_function, metrics = ['accuracy'])
+        self.q_network.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
 
 
     def update_exploration_probability(self,bool_debug = False):
@@ -205,7 +205,7 @@ class DQNAgent:
         model.add(Dense(56,activation='relu'))
         model.add(Dense(self.action_space.shape[0],activation='linear'))
         # compile the network with the custom loss defined in my_loss_fn
-        model.compile(optimizer = RMSprop(), loss = self.loss_function, metrics = ['accuracy'])
+        model.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
         return model
 
 
@@ -253,10 +253,10 @@ class DQNAgent:
                 #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
                 next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
                 args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
-
+                
                 #if gus in terminal state
-                if is_next_state_terminal:
-                    break
+                #if is_next_state_terminal:
+                #    break
 
                 rewards_per_episode.append(reward)
 
@@ -268,18 +268,6 @@ class DQNAgent:
                 if self.memoryBuffer.__len__() > self.batch_size: #si tenemos el minimo de transiciones necesarias
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
                     self.trainNetwork()
-
-                    #save pretrained model and save a text file with episode rewards
-                    if not folder_pretrained_model == "":
-                        self.counter_iter += 1
-                        if self.counter_iter > self.pretrained_iter_saver:
-                            save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
-                            self.counter_iter = 0
-
-                            #mean episode rewards save
-                            with open(folder_pretrained_model + info_data_file + ".txt","a+") as f:
-                                f.write(self.RewardsEpisode)
-                                self.RewardsEpisode = ""
                 
                 current_state = next_state
                 
@@ -294,6 +282,19 @@ class DQNAgent:
                                                                                    self.counter_train_timeslot))        
             self.RewardsEpisode += str(np.round(np.sum(rewards_per_episode),3)) + ","
 
+            #save pretrained model and save a text file with episode rewards
+            if not folder_pretrained_model == "":
+                        
+                if self.counter_iter == self.pretrained_iter_saver:
+                    save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
+                    self.counter_iter = 0
+
+                    #mean episode rewards save
+                    with open(folder_pretrained_model + info_data_file + ".txt","a+") as f:
+                        f.write(self.RewardsEpisode)
+                        self.RewardsEpisode = ""
+
+            self.counter_iter += 1
             self.counter_train_timeslot = 0
 
     def selectAction(self,state):

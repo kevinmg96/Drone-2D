@@ -135,12 +135,22 @@ class environment(robotarium.Robotarium):
         else:
             #random position gus inside drone rc...
             for i in range(self.obj_gus.poses.shape[1]):
-                next_pos_gus_inside_rc = np.where(misc.poissonChoice(1.0,5) < 0.5,True,False)
-                if next_pos_gus_inside_rc: #gu next position inside rc...
-                    next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
-                else: #gu next position outside rc...
-                    next_pos_gus_mag = self.obj_drones.rc * factor_gu_out_rc
-                self.obj_gus.poses[:2,i],_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+                #next_pos_gus_inside_rc = np.where(misc.poissonChoice(1.0,5) < 0.5,True,False)
+                #if next_pos_gus_inside_rc: #gu next position inside rc...
+                next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
+                #else: #gu next position outside rc...
+                #    next_pos_gus_mag = self.obj_drones.rc * factor_gu_out_rc
+                #self.obj_gus.poses[:2,i],_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+                possible_next_pos_gu,_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+                possible_next_pos_gu = possible_next_pos_gu.reshape(-1,1)               
+
+                terminal_state = self.isTerminalState(possible_next_pos_gu)
+                #si es estado terminal la posible nueva posicion. entonces procedemos a colocar los gus en la misma posicion del drone
+                if terminal_state:
+                    self.obj_gus.poses[:2,i] = self.obj_drones.poses[:2,0]
+                else:
+                     self.obj_gus.poses[:2,i] = possible_next_pos_gu[:,0]
+
             
                 
         #reset gus  velocities
