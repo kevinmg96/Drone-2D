@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 import rps.Modules.gu as gu
 import rps.Modules.mobileagent as mobileagent
 import rps.Modules.misc as misc
-
+import time
 
 class environment(robotarium.Robotarium):
     """
@@ -119,9 +119,9 @@ class environment(robotarium.Robotarium):
         #--------------------------------------------------
 
         #randomly select a distribution, based
-        next_reset_distribution = [misc.randomChoice(1.0),misc.poissonChoice(1.0,5),
+        next_reset_distribution = [misc.gaussianChoice(1.0,0.35,0.15),
         misc.gaussianChoice(1.0)]
-        p_distribution = [0.3,0.4,0.3]
+        p_distribution = [0.45,0.55]
         next_reset_env = np.random.choice(next_reset_distribution,p=p_distribution)
 
         bool_random_gus = np.where(next_reset_env < 0.5,True,False)
@@ -135,7 +135,7 @@ class environment(robotarium.Robotarium):
         else:
             #random position gus inside drone rc...
             for i in range(self.obj_gus.poses.shape[1]):
-                #next_pos_gus_inside_rc = np.where(misc.poissonChoice(1.0,5) < 0.5,True,False)
+                #next_pos_gus_inside_rc = misc.gaussianChoice(1.0,0.31,0.15) < 0.5,True,False)
                 #if next_pos_gus_inside_rc: #gu next position inside rc...
                 next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
                 #else: #gu next position outside rc...
@@ -149,7 +149,7 @@ class environment(robotarium.Robotarium):
                 if terminal_state:
                     self.obj_gus.poses[:2,i] = self.obj_drones.poses[:2,0]
                 else:
-                     self.obj_gus.poses[:2,i] = possible_next_pos_gu[:,0]
+                    self.obj_gus.poses[:2,i] = possible_next_pos_gu[:,0]
 
             
                 
@@ -231,10 +231,15 @@ class environment(robotarium.Robotarium):
         #retornamos punto origen, width, height
         return self.boundaries
     
-    
-
-
-
+if __name__ == "__main__":
+    start = time.time()
+    x = np.array([[0.5,3.3],
+              [2.0,1.5],
+              ])
+    #b = isTerminalState(x)
+    end = time.time()
+    print("executed time: {} s".format(end - start))
+    #print(b)
 
     
 

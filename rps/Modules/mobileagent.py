@@ -10,6 +10,8 @@ es decir un agente contendra la info de todos los drones..
 """
 import numpy as np
 import rps.Modules.misc as misc
+import rps.Modules.gu as gu
+import time
 class Radio:
     """
     modelo del radio transmisor. permite la funcionalidad de establecer vinculos de comunicacion con usuarios en tierra
@@ -37,7 +39,7 @@ class Radio:
         for i in range(self.poses.shape[1]):
             for j in range(obj_gus.poses.shape[1]):
 
-                delta = misc.euclideanDistance(self.poses[:2,i],obj_gus.poses[:2,j])
+                delta = np.linalg.norm(obj_gus.poses[:2,j] - self.poses[:2,i])#misc.euclideanDistance(self.poses[:2,i],obj_gus.poses[:2,j])
 
                 if obj_gus.ids[j] in self.dict_gu[i]:
                     self.dict_gu[i][obj_gus.ids[j]]["DataRate"] = obj_gus.transmission_rate[j]
@@ -100,3 +102,20 @@ class MobileAgent(Radio):
 
 
 
+if __name__ == "__main__":
+    
+    x = np.array([[0.5,1.2,1.8,1.6],
+                  [0.7,1.5,2.0,1.3],
+                  [0.0,0.0,0.0,0.0]])
+    obj_gus = gu.GroundUser(np.arange(4),x,0.0,0.0,0.0,0.0,0.0,0.0)
+    
+    obj_gus.setTransmissionRate(100.0)
+    y = np.array([[0.5],
+                  [0.7],
+                  [0.0]])
+    obj_drones = MobileAgent(np.arange(1),y,5.0,0.0)
+    start = time.time()
+    obj_drones.echoRadio(obj_gus)
+    end = time.time()
+    print("executed time: {} s".format(end - start))
+    

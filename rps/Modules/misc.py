@@ -4,7 +4,11 @@ libreria de funciones
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import time
+
+
 def euclideanDistance(point_1,point_2):
+    #deprecated for now
 
     p1_z = 0
     p2_z = 0
@@ -16,24 +20,22 @@ def euclideanDistance(point_1,point_2):
     return np.sqrt((point_2[0] - point_1[0]) ** 2 + (point_2[1] - point_1[1]) ** 2 + (p2_z - p1_z) ** 2)
 
 
-def gaussianChoice(mag_max,std_dev = 0.1, samp_size = 100000,bool_debug = False):
+def gaussianChoice(mag_max,loc = 0.5,std_dev = 0.1, samp_size = 100,bool_debug = False):
 
     #create the gaussian probability distribution of size samp_size
     x = np.linspace(0,1,samp_size)
-    prob_x = stats.norm.pdf(x,loc = 0.5, scale = std_dev)
+    prob_x = stats.norm.pdf(x,loc = loc, scale = std_dev)
     prob_x = prob_x / np.sum(prob_x)
-
     if bool_debug:
         #debugearemos la prob dist
-        plt.plot(prob_x)
+        plt.plot(prob_x,"r")
         plt.show()
 
     #create an array from 0 to mag_max, same size as x
     pos_y_value = np.linspace(0,mag_max,samp_size)
 
-
-
     return np.random.choice(pos_y_value,p=prob_x)
+
 
 def poissonChoice(mag_max,mean = 3,samp_size = 100000,bool_debug = False):
 
@@ -94,23 +96,28 @@ def computeNextPosition(next_mag,pos,direction = 2 * np.pi,bool_pos_gu = True,bo
         print("ingrese funcion")
 
     if bool_pos_gu: #la distancia que estamos calculando sera un gu, calculamos angulo random
-        dir = np.random.random(size = (1,1))[0] * direction
+        dir = np.random.random() * direction
     else: #la distancia es para un drone, ingresamos la direccion
         dir = direction
     if bool_debug:
-        print("ang rand: {}".format(dir))
+        print("ang rand: {}, type : {}".format(dir,type(dir)))
 
-    new_pos = np.zeros([2,])
+    new_pos = pos + np.array([np.cos(dir), np.sin(dir) ]) * next_mag   
 
-    new_pos[0] = pos[0] + np.cos(dir) * next_mag
-
-    new_pos[1] = pos[1] + np.sin(dir) * next_mag
-
-    if bool_debug:
+    if bool_debug:        
         print("new pos : {}".format(new_pos))
 
     return new_pos,dir
 
 if __name__ == "__main__":
-    max_distance = 5.0
-    dist_distributions = [randomChoice(max_distance), poissonChoice(max_distance),gaussianChoice(max_distance) ]
+    x = gaussianChoice(1.0,0.35,0.15,bool_debug=True)
+
+
+
+
+
+
+
+
+    
+

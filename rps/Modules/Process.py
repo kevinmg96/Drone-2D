@@ -61,6 +61,7 @@ class ProcesGuMobility:
                     #set new random position to displace gu             
                     next_possible_pos_gu,gu_direction = misc.computeNextPosition(next_dist_gu,x_gus[:2,i])
                     next_possible_pos_gu = next_possible_pos_gu.reshape(-1,1)
+                    print("debug new direction  to be revised: {}".format(gu_direction))
                     r.obj_gus.curr_direction[i] = gu_direction 
                 else:
                     #continue pursuing same direction...
@@ -82,7 +83,7 @@ class ProcesGuMobility:
                 if bool_debug:
                     print("GU : {}, final next position: {}".format(r.obj_gus.ids[i],goal_points_gus[:2,i]))
 
-                #set bool_new_direction for next possible gus position based on a distribution of probabilities
+                #set bool_new_direction for next possible gus position based on a distribution of probabilities revise when reimplementing
                 bool_new_direction_distribution = [misc.randomChoice(1.0),misc.poissonChoice(1.0,5),
                 misc.gaussianChoice(1.0)]
                 p_distribution = [0.1,0.8,0.1]

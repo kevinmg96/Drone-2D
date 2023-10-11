@@ -89,7 +89,7 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
-show_figure = True
+show_figure = False
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
@@ -188,8 +188,8 @@ pretrained_model_filename = "model_1_v2--51.keras"
 #load model test...
 num_episodes = 300
 batch_size = 400
-train_max_iter = 3
-save_interval_premodel = 2 #number of past epochs required for saving a pretrained model
+train_max_iter = 80
+save_interval_premodel = 5 #number of past epochs required for saving a pretrained model
 memory_capacity = 4500
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
                          save_interval_premodel)#,None,pretrained_model_path + pretrained_model_filename)
