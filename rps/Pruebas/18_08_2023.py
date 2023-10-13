@@ -26,6 +26,9 @@ import time
 import threading
 import itertools
 import pickle
+from sys import platform
+
+
 
 def rewardFunc(env,weight_dr,weight_dis):
         conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
@@ -62,6 +65,21 @@ def rewardFunc2(env,weight_dr,weight_dis):
         return reward
 
 
+def rewardFunc3(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
+                            trans_rate_tot)
+
+        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
+
+        reward = weight_dr * sum_dr #+ weight_dis * sum_dis
+        return reward
+
 #-------------------------------------------------------------------------------------------
 
 
@@ -79,8 +97,9 @@ show_figure = False
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
 rc_color = "k"
-drone_disp_range = [0,0.35] #rango de movimiento permitido del drone
-drone_disp_num  = 8#numero de divisiones en la accion displacement
+disp_max = 0.35
+drone_disp_num  = 5#numero de divisiones en la accion displacement
+drone_disp_range = [disp_max/drone_disp_num,disp_max] #rango de movimiento permitido del drone
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
@@ -90,10 +109,13 @@ arr_drone_angle_values = np.linspace(drone_angle_range[0],drone_angle_range[1],n
 
 #cartesian product (displacement, direction):
 cartesian_action = np.array(list(itertools.product(arr_drone_disp_values,arr_drone_angle_values)))
-encode_action = np.arange(cartesian_action.shape[0])
+
+#append action hovering (mag : 0, angle : 0)
+cartesian_action = np.concatenate([cartesian_action,np.zeros([1,2])],axis = 0)
+
 
 #E-greedy policy
-prob_epsilon = 0.1
+prob_epsilon = 0.2
 target_network_update_interval = 300 #cada 300 timesteps actualizaremos los pesos del target network a que sean iguales
 #a los del q network
 
@@ -128,8 +150,8 @@ state_dimension = 6
 gamma = 0.995
 
 #reward characteristics...
-weight_data_rate = 2.5
-weight_rel_dist = 0.3
+weight_data_rate = 5
+weight_rel_dist = 0.15
 penalize_drone_out_range = 1
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
@@ -162,33 +184,45 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
 obj_process_mob_trans_gu.setStopProcess()
 
+#working path setup based on os...
+if platform == "linux":
+      working_path = "/mnt/c/"
+else: #windows
+      working_path = "C:/"
 
+#setting to work with CPU or GPU...
+import os
+bool_use_gpu = False
 
-pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
-pretrained_model_filename = "model_1_v2--9.keras"
+if  not bool_use_gpu:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+pretrained_model_path = working_path +"Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
+pretrained_model_filename = "model_1_v1--29.keras"
 #load model test...
-num_episodes = 300
-batch_size = 400
-train_max_iter = 200
-save_interval_premodel = 1000
-memory_capacity = 3500
+num_episodes = 5000
+batch_size = 500
+train_max_iter = 50
+save_interval_premodel = 200 #number of past epochs required for saving a pretrained model
+memory_capacity = 4500
+debug_interval = 150 #debugging rewards and running time per episode
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel)#,pretrained_model_path + pretrained_model_filename)
+                         save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
 
-pretrained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-objective/13_09_2023/model 1 v2/"
-pretrained_name = "model_1_v2"
-pretrained_data_filename = "model_1_v2_data"
+pretrained_path = working_path + "Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
+pretrained_name = "model_1_v1"
+pretrained_data_filename = "model_1_v1_data"
 
 dqn_agent.trainingEpisodes(r,obj_process_mob_trans_gu,pretrained_path,
-                           pretrained_name,pretrained_data_filename,bool_debug=True,
+                           pretrained_name,pretrained_data_filename,bool_debug=True,debug_interval = debug_interval,
                            PositionController = unicycle_position_controller,
                             RewardFunc = rewardFunc,
                             WeightDataRate = weight_data_rate,
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range )
 
-trained_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-objective/13_09_2023/model 1 v2/"
-model_name = "model_1_v2"
+trained_path = working_path + "Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
+model_name = "model_1_v1"
 DQN.save_model(dqn_agent.q_network,trained_path + model_name + ".keras")
 
 print("saving reward history last episodes...")

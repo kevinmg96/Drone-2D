@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 import rps.Modules.gu as gu
 import rps.Modules.mobileagent as mobileagent
 import rps.Modules.misc as misc
-
+import time
 
 class environment(robotarium.Robotarium):
     """
@@ -58,9 +58,7 @@ class environment(robotarium.Robotarium):
 
             while (np.size(pose_eval(x_robots, goal_points_robots, position_error = 0.05, rotation_error=300)) != self.number_of_robots ):
 
-                # Get poses of agents
-                x_robots = self.obj_drones.poses
-
+            
                 # Create single-integrator control inputs for mobile agents and gus
                 dxu_robots = unicycle_position_controller(x_robots, goal_points_robots[:2][:])
 
@@ -69,6 +67,10 @@ class environment(robotarium.Robotarium):
 
                 # Iterate the simulation
                 self.step_v2(True)
+
+                # Get poses of agents
+                x_robots = self.obj_drones.poses
+
         else: # if training, the next drone positions will be automatically used to update drones pose
             self.obj_drones.poses[:2,0] = drone_next_pos
 
@@ -76,7 +78,7 @@ class environment(robotarium.Robotarium):
         self.obj_drones.echoRadio(self.obj_gus)
 
         #return the transition tuple -> next_state,reward,is_next_state_terminal
-        reward = self.getReward(reward_func,weight_dr,weight_dis,flag_drone_out_range,drone_boundaries_penalization,True)
+        reward = self.getReward(reward_func,weight_dr,weight_dis,flag_drone_out_range,drone_boundaries_penalization)
         next_state = self.getState()
 
         drone_gu_pose = np.concatenate([self.obj_drones.poses,self.obj_gus.poses],axis = 1)
@@ -117,9 +119,9 @@ class environment(robotarium.Robotarium):
         #--------------------------------------------------
 
         #randomly select a distribution, based
-        next_reset_distribution = [misc.randomChoice(1.0),misc.poissonChoice(1.0,5),
+        next_reset_distribution = [misc.gaussianChoice(1.0,0.35,0.15),
         misc.gaussianChoice(1.0)]
-        p_distribution = [0.3,0.4,0.3]
+        p_distribution = [0.45,0.55]
         next_reset_env = np.random.choice(next_reset_distribution,p=p_distribution)
 
         bool_random_gus = np.where(next_reset_env < 0.5,True,False)
@@ -133,12 +135,22 @@ class environment(robotarium.Robotarium):
         else:
             #random position gus inside drone rc...
             for i in range(self.obj_gus.poses.shape[1]):
-                next_pos_gus_inside_rc = np.where(misc.poissonChoice(1.0,5) < 0.5,True,False)
-                if next_pos_gus_inside_rc: #gu next position inside rc...
-                    next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
-                else: #gu next position outside rc...
-                    next_pos_gus_mag = self.obj_drones.rc * factor_gu_out_rc
-                self.obj_gus.poses[:2,i],_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+                #next_pos_gus_inside_rc = misc.gaussianChoice(1.0,0.31,0.15) < 0.5,True,False)
+                #if next_pos_gus_inside_rc: #gu next position inside rc...
+                next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
+                #else: #gu next position outside rc...
+                #    next_pos_gus_mag = self.obj_drones.rc * factor_gu_out_rc
+                #self.obj_gus.poses[:2,i],_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+                possible_next_pos_gu,_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+                possible_next_pos_gu = possible_next_pos_gu.reshape(-1,1)               
+
+                terminal_state = self.isTerminalState(possible_next_pos_gu)
+                #si es estado terminal la posible nueva posicion. entonces procedemos a colocar los gus en la misma posicion del drone
+                if terminal_state:
+                    self.obj_gus.poses[:2,i] = self.obj_drones.poses[:2,0]
+                else:
+                    self.obj_gus.poses[:2,i] = possible_next_pos_gu[:,0]
+
             
                 
         #reset gus  velocities
@@ -219,10 +231,15 @@ class environment(robotarium.Robotarium):
         #retornamos punto origen, width, height
         return self.boundaries
     
-    
-
-
-
+if __name__ == "__main__":
+    start = time.time()
+    x = np.array([[0.5,3.3],
+              [2.0,1.5],
+              ])
+    #b = isTerminalState(x)
+    end = time.time()
+    print("executed time: {} s".format(end - start))
+    #print(b)
 
     
 

@@ -52,4 +52,33 @@ listo
 4.- probare con gama menor a 1 para ver si variar el peso de rewards futuros, evita que el drone sobre estime buenas decisiones, provocando que tome decisiones incorrectas precipitadamente. listo, falta probar
 5.- aplicar observacion 1 en prueba 13_09_2023. listo
 6.-reestructurar reward function. listo
-7.- state space: incluir drone position, gus positions,listols 
+7.- state space: incluir drone position, gus positions,listo
+
+me falta guardar el tiempo de ejecucion por epoca. imprimirlo mientras entrena o guardarlo en un archivo. LISTO
+pendientes:
+optimizar sistema
+realizar entrenamientos en google colab y evaluar tiempo por epoca. en paralelo, tratar de hacer funcionar alguna biblioteca de rl para el entrenamiento.
+
+#------------------------- PENDIENTES REVISION COMPLETA DEL SISTEMA PARA OPTIMIZARLO ---------------------------------------------------------------- ######
+funciones revision a detalle pendiente:
+misc.poissonchoice deprecated, ahora desplazo una funcion gausiiana para simular una distribucion poisson
+misc.gaussianchoice
+environment.resetenv
+
+parece ser que este conjunto de funciones requiere de mejorar sus tiempos.
+parece ser que la funcion trainnetowrk es la que toma mucho tiempo. para 100 epocas toma ~.3 s, lo que incrementa exponencialmente el tiempo con el numero
+de training slots y training eppochs. parece ser que trainnetwork() era mas rapido con CPU que con GPU.
+
+train network execution time:
+GPU windows 12/10/2023 : ~.45s
+GPU linux 12/10/2023 : ~.65s
+CPU colab 12/10/2023 : ~0.8s
+GPU colab 12/10/2023 : ~0.78-1.5s
+
+Episode running time:
+CPU windows 12/10/2023 : ~32s batch 500 
+
+funcino resetenv toma aprox 0.03 s. no es mucho. probablemente optimizando poisonchoice mejore el tiempo. tiempo mejoro a .001s
+
+prueba: entrenar codigo en google colab (ya incluye gpu) y ver si el tiempo de entrenamiento reduce. prueba realizada: no mejoro. tiempo de exec por episodio: ~60s
+#------------------------- PENDIENTES REVISION COMPLETA DEL SISTEMA PARA OPTIMIZARLO ---------------------------------------------------------------- ######

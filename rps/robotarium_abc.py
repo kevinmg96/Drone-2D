@@ -108,9 +108,9 @@ class RobotariumABC(ABC):
         self.gu_tb_data = []
 
         num_gus = self.obj_gus.poses.shape[1]
+        #reseteamos data rates
+        self.obj_gus.transmission_rate[:] = 0.0
         for i in range(num_gus):
-            #reseteamos data rates
-            self.obj_gus.transmission_rate[i] = 0.0
 
             if self.show_figure:
                 self.showGUs(Index = i)

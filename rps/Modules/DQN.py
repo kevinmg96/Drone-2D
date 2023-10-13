@@ -22,7 +22,7 @@ import tensorflow
 from tensorflow import keras
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential,load_model
-from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import RMSprop,Adam
 from tensorflow import gather_nd
 from tensorflow.keras.losses import mean_squared_error
 
@@ -100,19 +100,41 @@ def save_pretrained_model(model,folder_path,filename):
         full_path = folder_path + filename + "--" + str(int(version_model[version_model_index + 2:]) + 1) + ".keras"
     model.save(full_path)
 
+s = ""
+
+def aux_f_convert_string_tuple(x):
+    #split string tuple
+    x1 = x.split(",")
+    #remove parenthesis
+    x2 = [float(s[1:]) if i == 0 else float(s[:-1]) for i,s in enumerate(x1)]
+
+    return tuple(x2)
+
 def load_info_data(full_data_path):
     data_file =  open(full_data_path, "r") 
     data_stream = data_file.read()
-    data_split = data_stream.split(",")
+    data_split = data_stream.split(";")
     data_split.pop()
-    data_array = np.array(data_split,dtype=float)
+    data_array = np.array(list(map(aux_f_convert_string_tuple,data_split)))
     return data_array
 
 def plot_rewards(data):
-    fig = plt.figure()
-    plt.scatter(np.arange(start =1 , stop = len(data) + 1), data)
-    plt.xlabel("Number of episodes")
-    plt.ylabel("Reward")
+    #---- PLOT SUBPLOTS REWARD AND RUNNING TIME
+    fig, axs = plt.subplots(2,1)
+    f = lambda x: x[0]
+    rewards = list(map(f,data))
+    f = lambda x: x[1]
+    running_time = list(map(f,data))
+
+    axs[0].plot(np.arange(start =1 , stop = len(data) + 1), rewards)
+    axs[0].set_title('Episode Rewards')
+    axs[0].set_xlabel("Number of episodes")
+    axs[0].set_ylabel("Rewards")
+
+    axs[1].plot(np.arange(start =1 , stop = len(data) + 1), running_time)
+    axs[1].set_title('Episode Execution time')
+    axs[1].set_xlabel("Number of episodes")
+    axs[1].set_ylabel("time (s)")
     plt.show()
 
 #-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
@@ -129,7 +151,7 @@ class DQNAgent:
         self.timeslot_train_iter_max = timeslot_train_iter_max
 
         #salvar el modelo preentrado cada cierto numero de iteraciones. parametro ingresado a la clase
-        self.counter_iter = 0
+        self.counter_iter = 1
         self.pretrained_iter_saver = pretrained_iter_saver
 
         self.gamma = gamma
@@ -143,7 +165,7 @@ class DQNAgent:
         self.target_network_update_interval = target_network_update_interval 
 
         #mean de las recompensas por episodio
-        self.RewardsEpisode = "" # change methodology to save it in string format[]
+        self.DataEpisode = "" # change methodology to save it in string format[]
 
         #create q network NN model
         self.loss_function = self.my_loss_fn
@@ -164,7 +186,7 @@ class DQNAgent:
     
     def load_keras_model(self,model_full_path):
         self.q_network = load_model(model_full_path,compile=False)
-        self.q_network.compile(optimizer = RMSprop(), loss = self.loss_function, metrics = ['accuracy'])
+        self.q_network.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
 
 
     def update_exploration_probability(self,bool_debug = False):
@@ -205,32 +227,35 @@ class DQNAgent:
         model.add(Dense(56,activation='relu'))
         model.add(Dense(self.action_space.shape[0],activation='linear'))
         # compile the network with the custom loss defined in my_loss_fn
-        model.compile(optimizer = RMSprop(), loss = self.loss_function, metrics = ['accuracy'])
+        model.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
         return model
 
 
 
 
     def trainingEpisodes(self,env,obj_process_mob_trans_gu,folder_pretrained_model = "",
-                        model_name = "",info_data_file = "",bool_debug = False,**args):
+                        model_name = "",info_data_file = "",bool_debug = False,debug_interval = 100,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
         #ejecutamos accion drone en simulador y obtenemos reward de accion , asi como nuevo estado
         # almacenamos transition en buffer
         #si el replay buffer ya tiene su capacidad maxima llena, entonces procedemos con el entrenamiento de la network
         for i in range(self.num_episodes):
+            start = time.perf_counter()
             rewards_per_episode = []
 
-            if bool_debug:
+            if bool_debug and i % debug_interval == 0:
                 print("Simulating episode {}".format(i))
 
-            #reseteamos el ambiente, al inicio de cada episodio...           
+            #reseteamos el ambiente, al inicio de cada episodios      
             env.resetEnv()
+
+
 
             #set transmission rate for each gu...
             #actualizamos estatus data tranmission y rate de los gus
-            for k in range(env.obj_gus.poses.shape[1]):
-                env.obj_gus.setTransmissionRate(env.obj_gus.max_gu_data,False)
+            env.obj_gus.setTransmissionRate(env.obj_gus.max_gu_data,False)
+            for k in range(env.obj_gus.poses.shape[1]):              
                     
                 #actualizamos data transmission value en ambiente
                 if env.show_figure:
@@ -251,12 +276,13 @@ class DQNAgent:
                 index_action, action = self.selectAction(current_state)
 
                 #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
+                
                 next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
                 args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
-
+                
                 #if gus in terminal state
-                if is_next_state_terminal:
-                    break
+                #if is_next_state_terminal:
+                #    break
 
                 rewards_per_episode.append(reward)
 
@@ -267,19 +293,10 @@ class DQNAgent:
                 #train q_network...
                 if self.memoryBuffer.__len__() > self.batch_size: #si tenemos el minimo de transiciones necesarias
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
+                    #start1 = time.perf_counter()
                     self.trainNetwork()
-
-                    #save pretrained model and save a text file with episode rewards
-                    if not folder_pretrained_model == "":
-                        self.counter_iter += 1
-                        if self.counter_iter > self.pretrained_iter_saver:
-                            save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
-                            self.counter_iter = 0
-
-                            #mean episode rewards save
-                            with open(folder_pretrained_model + info_data_file + ".txt","a+") as f:
-                                f.write(self.RewardsEpisode)
-                                self.RewardsEpisode = ""
+                    #end1 = time.perf_counter()
+                    #print("Debug running time training : {} s".format(end1 - start1))
                 
                 current_state = next_state
                 
@@ -287,13 +304,30 @@ class DQNAgent:
   
 
             #update exploration probability...
-            self.update_exploration_probability() 
-                
-            if bool_debug:
-                print("Rewards : {},episode : {}, num. iterations: {}".format(np.sum(rewards_per_episode), i,
-                                                                                   self.counter_train_timeslot))        
-            self.RewardsEpisode += str(np.round(np.sum(rewards_per_episode),3)) + ","
+            self.update_exploration_probability()
 
+            end = time.perf_counter() 
+
+            if bool_debug and i % debug_interval == 0:
+                print("Rewards : {},episode : {}, num. iterations: {}, exec time : {} s".format(np.sum(rewards_per_episode), i,
+                                                                                   self.counter_train_timeslot,end - start))      
+
+             
+            self.DataEpisode += str(tuple([np.round(np.sum(rewards_per_episode),2),np.round(end-start,2)])) + ";"
+
+            #save pretrained model and save a text file with episode rewards plus episode running time.
+            if not folder_pretrained_model == "":
+                        
+                if self.counter_iter == self.pretrained_iter_saver:
+                    save_pretrained_model(self.q_network,folder_pretrained_model,model_name)
+                    self.counter_iter = 0
+
+                    #mean episode rewards save
+                    with open(folder_pretrained_model + info_data_file + ".txt","a+") as f:
+                        f.write(self.DataEpisode)
+                        self.DataEpisode = ""
+
+            self.counter_iter += 1
             self.counter_train_timeslot = 0
 
     def selectAction(self,state):

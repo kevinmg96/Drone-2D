@@ -24,6 +24,59 @@ import threading
 import itertools
 import pickle
 
+
+
+def rewardFunc(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
+                            trans_rate_tot)
+
+        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
+
+        reward = weight_dr * sum_dr + weight_dis * sum_dis
+        return reward
+
+
+
+def rewardFunc2(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_conec = conec_1 + conec_2
+
+
+        sum_dr = (env.obj_gus.transmission_rate[0]/trans_rate_tot) + (env.obj_gus.transmission_rate[1]/trans_rate_tot)
+
+        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
+        reward = sum_conec + weight_dr * sum_dr + weight_dis * sum_dis
+
+        return reward
+
+def rewardFunc3(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
+                            trans_rate_tot)
+
+        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
+
+        reward = weight_dr * sum_dr #+ weight_dis * sum_dis
+        return reward
+
+#-------------------------------------------------------------------------------------------
+
 # -----------------------------------------TEST MODEL ----------------------------------------------------------------------#
 
 def test_performance_model(dqn_agent,env,**args):
@@ -33,6 +86,15 @@ def test_performance_model(dqn_agent,env,**args):
     #actualizamos los registros del drone...
     env.obj_drones.echoRadio(env.obj_gus)
 
+    #set transmission rate for each gu...
+    #actualizamos estatus data tranmission y rate de los gus
+    for k in range(env.obj_gus.poses.shape[1]):
+        env.obj_gus.setTransmissionRate(env.obj_gus.max_gu_data,False)
+                    
+        #actualizamos data transmission value en ambiente
+        if env.show_figure:
+            env.updateGUDataRate(k,env.obj_gus.transmission_rate[k])
+
     #get initial state
     current_state = env.getState()
     is_next_state_terminal = False
@@ -40,29 +102,25 @@ def test_performance_model(dqn_agent,env,**args):
     rewards_per_episode = []
     counter_train_timeslot = 0
 
-    while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
-        counter_train_timeslot += 1
-        if counter_train_timeslot >dqn_agent.timeslot_train_iter_max: #salimos del inner loop. cambiamos a otro ep
-            break                
-
+    while dqn_agent.counter_train_timeslot < dqn_agent.timeslot_train_iter_max: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
+        
         #seleccionamos accion para agente de acuerdo a e greedy strategy
         index_action, action = dqn_agent.selectAction(current_state)
 
         #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-        next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"])
+        next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
+                args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
+        
+        #if gus in terminal state
+        if is_next_state_terminal:
+            print("sali por este if")
+            break
+
         rewards_per_episode.append(reward)     
 
         current_state = next_state
                 
-        # ejecutamos acciones de los gus...
-        obj_process_mob_trans_gu.guProcess(env,args["PositionController"],at_pose,False)
-
-        #actualizamos los registros del drone...
-        env.obj_drones.echoRadio(env.obj_gus)   
-
-        #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
-        if env.isTerminalState():
-            break 
+        dqn_agent.counter_train_timeslot += 1
 
     #plot rewards..
     DQN.plot_rewards(rewards_per_episode)
@@ -80,7 +138,7 @@ show_figure = True
 rc = 0.4 #radio de comunicaciones en m
 rc_color = "k"
 drone_disp_range = [0,0.3] #rango de movimiento permitido del drone
-drone_disp_num  = 5#numero de divisiones en la accion displacement
+drone_disp_num  = 8#numero de divisiones en la accion displacement
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
@@ -125,8 +183,11 @@ r = environment.environment(boundaries,initial_conditions=initial_conditions,sho
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 state_dimension = 6
-gamma = 0.1
-
+gamma =1.0
+#reward characteristics...
+weight_data_rate = 2.5
+weight_rel_dist = 0.3
+penalize_drone_out_range = 1
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
 # Define goal points by removing orientation from poses
@@ -157,12 +218,17 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
 obj_process_mob_trans_gu.setStopProcess()
 
-pretrained_model_path = "C:/Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D/rps/NN_models/Pretrained/DQN single agent-objective/05_09_2023/model 1 v2/"
-pretrained_model_filename = "model_1_v2--30.keras"
+pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/26_09_2023/model 1 v2/"
+pretrained_model_filename = "model_1_v2--51.keras"
+
+
+#data = DQN.load_info_data(pretrained_model_path + "model_1_v2_data.txt")
+#DQN.plot_rewards(data)
 #load model test...
+
 num_episodes = 2500
 batch_size = 700
-train_max_iter = 200
+train_max_iter = 150
 save_interval_premodel = 2000
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
                          save_interval_premodel,pretrained_model_path + pretrained_model_filename)
@@ -170,4 +236,8 @@ dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilo
 
 
 # test model...
-test_performance_model(dqn_agent,r, PositionController = unicycle_position_controller)
+test_performance_model(dqn_agent,r, PositionController = unicycle_position_controller,RewardFunc = rewardFunc2,
+                            WeightDataRate = weight_data_rate,
+                            WeightRelDist = weight_rel_dist,
+                            PenalDroneOutRange = penalize_drone_out_range)
+
