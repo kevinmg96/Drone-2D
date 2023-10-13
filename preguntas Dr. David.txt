@@ -1,0 +1,14 @@
+preguntas Dr. David:
+
+1.- consejos para mejorar y estabilizar el entrenamiento. 
+2.- metricas para evaluar el correcto aprendizaje del agente.
+3.- como saber si estoy utilizando la GPU para el training.
+4.- tiene sentido utilizar variables que se relacionen tanto en el state space como en reward function?
+5.- entrenamientos toma aprox. 5 dias.
+6.- si los data rates se encuentran muy cercanos, el agente no sabe distinguir a cual gu seguir
+7.- numero recomendado de training episodes para este sistema
+tiempo que tarda por epoca. por iteracion. 10 ms 
+muy poquitas
+hacerlo ajalr en colab.
+segundo: tiempo de ejecucion por epoca.
+

@@ -1,5 +1,9 @@
 import numpy as np
 
+x = [1,2]
+y = [1,2,3]
+print(x == y)
+
 x = np.random.randint(0,9,size=(3,4))
 print(x)
 y = np.random.randint(0,9,size=(3,4))

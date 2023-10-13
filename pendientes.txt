@@ -52,4 +52,4 @@ listo
 4.- probare con gama menor a 1 para ver si variar el peso de rewards futuros, evita que el drone sobre estime buenas decisiones, provocando que tome decisiones incorrectas precipitadamente. listo, falta probar
 5.- aplicar observacion 1 en prueba 13_09_2023. listo
 6.-reestructurar reward function. listo
-7.- state space: incluir drone position, gus positions,listo
+7.- state space: incluir drone position, gus positions,listols 
