@@ -67,8 +67,18 @@ environment.resetenv
 
 parece ser que este conjunto de funciones requiere de mejorar sus tiempos.
 parece ser que la funcion trainnetowrk es la que toma mucho tiempo. para 100 epocas toma ~.3 s, lo que incrementa exponencialmente el tiempo con el numero
-de training slots y training eppochs
+de training slots y training eppochs. parece ser que trainnetwork() era mas rapido con CPU que con GPU.
+
+train network execution time:
+GPU windows 12/10/2023 : ~.45s
+GPU linux 12/10/2023 : ~.65s
+CPU colab 12/10/2023 : ~0.8s
+GPU colab 12/10/2023 : ~0.78-1.5s
+
+Episode running time:
+CPU windows 12/10/2023 : ~32s batch 500 
+
 funcino resetenv toma aprox 0.03 s. no es mucho. probablemente optimizando poisonchoice mejore el tiempo. tiempo mejoro a .001s
 
-prueba: entrenar codigo en google colab (ya incluye gpu) y ver si el tiempo de entrenamiento reduce.
+prueba: entrenar codigo en google colab (ya incluye gpu) y ver si el tiempo de entrenamiento reduce. prueba realizada: no mejoro. tiempo de exec por episodio: ~60s
 #------------------------- PENDIENTES REVISION COMPLETA DEL SISTEMA PARA OPTIMIZARLO ---------------------------------------------------------------- ######

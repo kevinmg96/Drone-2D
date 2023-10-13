@@ -234,17 +234,17 @@ class DQNAgent:
 
 
     def trainingEpisodes(self,env,obj_process_mob_trans_gu,folder_pretrained_model = "",
-                        model_name = "",info_data_file = "",bool_debug = False,**args):
+                        model_name = "",info_data_file = "",bool_debug = False,debug_interval = 100,**args):
         # gu process: en esta seccion del entrenamiento, ejecutaremos las acciones permitidas a los gus.
         #ejecutamos accion del drone utilizando la heuristica epsilon-greedy
         #ejecutamos accion drone en simulador y obtenemos reward de accion , asi como nuevo estado
         # almacenamos transition en buffer
         #si el replay buffer ya tiene su capacidad maxima llena, entonces procedemos con el entrenamiento de la network
         for i in range(self.num_episodes):
-            start = time.time()
+            start = time.perf_counter()
             rewards_per_episode = []
 
-            if bool_debug:
+            if bool_debug and i % debug_interval == 0:
                 print("Simulating episode {}".format(i))
 
             #reseteamos el ambiente, al inicio de cada episodios      
@@ -293,10 +293,10 @@ class DQNAgent:
                 #train q_network...
                 if self.memoryBuffer.__len__() > self.batch_size: #si tenemos el minimo de transiciones necesarias
                     #para poder crear el batchbuffer, procedemos al entrenamiento de la red q network
-                    #start = time.time()
+                    #start1 = time.perf_counter()
                     self.trainNetwork()
-                    #end = time.time()
-                    #print("Debug running time training : {} s".format(end - start))
+                    #end1 = time.perf_counter()
+                    #print("Debug running time training : {} s".format(end1 - start1))
                 
                 current_state = next_state
                 
@@ -306,9 +306,9 @@ class DQNAgent:
             #update exploration probability...
             self.update_exploration_probability()
 
-            end = time.time() 
+            end = time.perf_counter() 
 
-            if bool_debug:
+            if bool_debug and i % debug_interval == 0:
                 print("Rewards : {},episode : {}, num. iterations: {}, exec time : {} s".format(np.sum(rewards_per_episode), i,
                                                                                    self.counter_train_timeslot,end - start))      
 
