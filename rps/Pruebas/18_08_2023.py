@@ -184,11 +184,15 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
 obj_process_mob_trans_gu.setStopProcess()
 
-#working path setup based on os...
+#working path setup based on os and pc ..
 if platform == "linux":
       working_path = "/mnt/c/"
 else: #windows
       working_path = "C:/"
+
+working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator",
+"Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
+"Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
 #setting to work with CPU or GPU...
 import os
@@ -197,7 +201,7 @@ bool_use_gpu = False
 if  not bool_use_gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-pretrained_model_path = working_path +"Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
+pretrained_model_path = working_path + working_directory[2] + "/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
 pretrained_model_filename = "model_1_v1--29.keras"
 #load model test...
 num_episodes = 5000
@@ -209,9 +213,9 @@ debug_interval = 150 #debugging rewards and running time per episode
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,memory_capacity,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
                          save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
 
-pretrained_path = working_path + "Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
-pretrained_name = "model_1_v1"
-pretrained_data_filename = "model_1_v1_data"
+pretrained_path = working_path  + working_directory[2] + "/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v2/"
+pretrained_name = "model_1_v2"
+pretrained_data_filename = "model_1_v2_data"
 
 dqn_agent.trainingEpisodes(r,obj_process_mob_trans_gu,pretrained_path,
                            pretrained_name,pretrained_data_filename,bool_debug=True,debug_interval = debug_interval,
@@ -221,8 +225,8 @@ dqn_agent.trainingEpisodes(r,obj_process_mob_trans_gu,pretrained_path,
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range )
 
-trained_path = working_path + "Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Trained/DQN single agent-multi objective/10_10_2023/model 1 v1/"
-model_name = "model_1_v1"
+trained_path = working_path + + working_directory[2] + "/rps/NN_models/Trained/DQN single agent-multi objective/10_10_2023/model 1 v2/"
+model_name = "model_1_v2"
 DQN.save_model(dqn_agent.q_network,trained_path + model_name + ".keras")
 
 print("saving reward history last episodes...")
