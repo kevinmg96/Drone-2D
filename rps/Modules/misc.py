@@ -34,7 +34,7 @@ def gaussianChoice(mag_max,loc = 0.5,std_dev = 0.1, samp_size = 100,bool_debug =
     #create an array from 0 to mag_max, same size as x
     pos_y_value = np.linspace(0,mag_max,samp_size)
 
-    return np.random.choice(pos_y_value,p=prob_x)
+    return np.random.default_rng().choice(pos_y_value,p=prob_x)
 
 
 def poissonChoice(mag_max,mean = 3,samp_size = 100000,bool_debug = False):
@@ -72,7 +72,7 @@ def poissonChoice(mag_max,mean = 3,samp_size = 100000,bool_debug = False):
         print("possible next positions: {}".format(pos_next_values))
 
     
-    return np.random.choice(pos_next_values,size = 1, p = arr_p_values)[0]
+    return np.random.default_rng().choice(pos_next_values,size = 1, p = arr_p_values)[0]
 
 
 def randomChoice(mag_max):

@@ -77,8 +77,26 @@ GPU colab 12/10/2023 : ~0.78-1.5s
 
 Episode running time:
 CPU windows 12/10/2023 : ~32s batch 500 
+GPU windows 15/10/2023 : ~2min al episodio 800
 
 funcino resetenv toma aprox 0.03 s. no es mucho. probablemente optimizando poisonchoice mejore el tiempo. tiempo mejoro a .001s
 
 prueba: entrenar codigo en google colab (ya incluye gpu) y ver si el tiempo de entrenamiento reduce. prueba realizada: no mejoro. tiempo de exec por episodio: ~60s
+
+NOTA: el sistema de entrenamiento como esta definido hasta ahora parece correr mas rapido en GPU despues de cierto numero de episodios de entrenamiento. no como en
+CPU donde aprox despues de 150 episodios, crece el tiempo de entrenamiento cuadratico.
+
+
+en la bestia. se queda sin memoria RAM al episodio 800
+parece ser que usar np.random.default_rng().choice es mas eficiente que random.sample ,  
+tratar de implementar train_network usando arregloes en vez de ciclos for.
+el entrenamiento de la red neuronal tratare de hacerlo usando parallel computing.
+hacer funcionar tf-agents con mi ambiente
+probar eficiencia del replay buffer propuesto por tf-agents
+
+pruebas optimizando replay buffer:
+100,000 samples k = 10000
+random.sample ~ 0.3s
+rigged buffer ~.002s
+
 #------------------------- PENDIENTES REVISION COMPLETA DEL SISTEMA PARA OPTIMIZARLO ---------------------------------------------------------------- ######
