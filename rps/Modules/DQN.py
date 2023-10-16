@@ -42,6 +42,9 @@ import glob
 import os
 import re
 import time
+from numpy_ringbuffer import RingBuffer
+from timeit import default_timer as timer
+from contextlib import contextmanager
 
 Transition = namedtuple('Transition',
                         ('state', 'action','reward','next_state', "is_terminal"))
@@ -50,7 +53,7 @@ Transition = namedtuple('Transition',
 class ReplayMemory(object):
 
     def __init__(self, capacity):
-        self.memory = deque([], maxlen=capacity)
+        self.memory = RingBuffer(capacity=capacity,dtype=Transition)
 
     def push(self, *args):
         """Save a transition"""
@@ -60,8 +63,16 @@ class ReplayMemory(object):
     def drop_left(self):
         self.memory.popleft()
 
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+    
+    def sample(self,batch_size):
+        return np.random.default_rng().choice(self.memory,size = (batch_size,),replace=False)
+        #batch_indexes = np.random.default_rng().choice(len(self.memory),size = (batch_size,))
+        #return self.memory[batch_indexes]
+    def sample3(self,batch_size):
+        #reverb replay buffer
+        pass
+
+
 
     def __len__(self):
         return len(self.memory)
@@ -415,27 +426,55 @@ class DQNAgent:
 
 
              
-       
+@contextmanager
+def timeblock(label):
+    start = timer()
+    try:
+        yield
+    finally:
+        end = timer()
+        print ('{} elapsed: {}'.format(label, end - start))       
 
 if __name__ == "__main__":
     #testearemos lso argumentos de la clase DQN
     state_dimension = 6
-    n_transitions = 100
-    action_space = np.random.randint(0,5,size=(4,2))
+    n_transitions = 100000
+    k = 10000
+    buffer_1 = ReplayMemory(n_transitions)
+    buffer_2 = ReplayMemory(n_transitions,2)
+    for _ in range(n_transitions):
+        action = np.random.randint(0,41)
+        state =np.random.random(size=(6,))
+        reward = np.random.random()
+        next_state = np.random.random(size=(6,))
+        is_next_terminal = np.random.randint(0,2,dtype=bool)
+        buffer_1.push(action,state,reward,next_state,is_next_terminal)
+        buffer_2.push(action,state,reward,next_state,is_next_terminal)
+
+    print(f'{n_transitions} memory {k} samples')
+    with timeblock("random.sample"):
+        x = buffer_1.sample(k)
+
+    with timeblock("np.random.default_rng().choice"):
+        y = buffer_2.sample2(k)   
+
+
+    action_space = np.random.randint(0,9,size=(40,2))
     
     #
-    batch_size = 10
+    batch_size = k
     agent = DQNAgent(state_dimension,action_space,n_transitions,0.1,0.6,100,batch_size)
 
-
     for i in range(n_transitions):
-        current_state = np.random.random(size=(1,state_dimension))
-        index_action = np.random.choice(np.arange(action_space.shape[0]))
-        action = (index_action,action_space[index_action])
+        act_index = np.random.choice(np.arange(action_space.shape[0]))
+        action = action_space[act_index]
+        state =np.random.random(size=(6,))
         reward = np.random.random()
-        next_state = np.random.random(size=(1,state_dimension))
-        is_terminal = np.random.randint(0,2,dtype=bool)
+        next_state = np.random.random(size=(6,))
+        is_next_terminal = np.random.randint(0,2,dtype=bool)
 
-        agent.memoryBuffer.push(current_state,action,reward,next_state,is_terminal)
+        agent.memoryBuffer.push(state,action,reward,next_state,is_next_terminal)
+
+    
 
     agent.trainNetwork()
