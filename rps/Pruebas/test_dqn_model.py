@@ -23,6 +23,7 @@ import time
 import threading
 import itertools
 import pickle
+from sys import platform
 
 
 
@@ -80,50 +81,53 @@ def rewardFunc3(env,weight_dr,weight_dis):
 # -----------------------------------------TEST MODEL ----------------------------------------------------------------------#
 
 def test_performance_model(dqn_agent,env,**args):
-    #reseteamos el ambiente, al inicio de cada episodio...
-    env.resetEnv()
-           
-    #actualizamos los registros del drone...
-    env.obj_drones.echoRadio(env.obj_gus)
+    while True:
+        #reseteamos el ambiente, al inicio de cada episodio...
+        env.resetEnv()
+            
+        #actualizamos los registros del drone...
+        env.obj_drones.echoRadio(env.obj_gus)
 
-    #set transmission rate for each gu...
-    #actualizamos estatus data tranmission y rate de los gus
-    for k in range(env.obj_gus.poses.shape[1]):
+        #set transmission rate for each gu...
+        #actualizamos estatus data tranmission y rate de los gus
         env.obj_gus.setTransmissionRate(env.obj_gus.max_gu_data,False)
+        for k in range(env.obj_gus.poses.shape[1]):              
+                        
+            #actualizamos data transmission value en ambiente
+            if env.show_figure:
+                env.updateGUDataRate(k,env.obj_gus.transmission_rate[k])
+
+        #get initial state
+        current_state = env.getState()
+        is_next_state_terminal = False
+
+        rewards_per_episode = []
+        counter_train_timeslot = 0
+
+        while dqn_agent.counter_train_timeslot < dqn_agent.timeslot_train_iter_max: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
+            
+            #seleccionamos accion para agente de acuerdo a e greedy strategy
+            index_action, action = dqn_agent.selectAction(current_state)
+
+            #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
+            next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
+                    args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
+            
+            #if gus in terminal state
+            #if is_next_state_terminal:
+            #    print("sali por este if")
+            #    break
+
+            rewards_per_episode.append(reward)     
+
+            current_state = next_state
                     
-        #actualizamos data transmission value en ambiente
-        if env.show_figure:
-            env.updateGUDataRate(k,env.obj_gus.transmission_rate[k])
+            dqn_agent.counter_train_timeslot += 1
 
-    #get initial state
-    current_state = env.getState()
-    is_next_state_terminal = False
+        #plot rewards..
+        #DQN.plot_rewards(rewards_per_episode)
 
-    rewards_per_episode = []
-    counter_train_timeslot = 0
-
-    while dqn_agent.counter_train_timeslot < dqn_agent.timeslot_train_iter_max: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
-        
-        #seleccionamos accion para agente de acuerdo a e greedy strategy
-        index_action, action = dqn_agent.selectAction(current_state)
-
-        #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-        next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
-                args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
-        
-        #if gus in terminal state
-        if is_next_state_terminal:
-            print("sali por este if")
-            break
-
-        rewards_per_episode.append(reward)     
-
-        current_state = next_state
-                
-        dqn_agent.counter_train_timeslot += 1
-
-    #plot rewards..
-    DQN.plot_rewards(rewards_per_episode)
+        dqn_agent.counter_train_timeslot = 0
 
 # -----------------------------------------TEST MODEL ----------------------------------------------------------------------#
 
@@ -135,10 +139,12 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 boundaries = [0,0,3.2,2.0]
 show_figure = True
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
-rc = 0.4 #radio de comunicaciones en m
+rc = 0.5 #radio de comunicaciones en m
 rc_color = "k"
-drone_disp_range = [0,0.3] #rango de movimiento permitido del drone
-drone_disp_num  = 8#numero de divisiones en la accion displacement
+disp_max = 0.35
+drone_disp_num  = 5#numero de divisiones en la accion displacement
+drone_disp_range = [disp_max/drone_disp_num,disp_max] #rango de movimiento permitido del drone
+
 
 arr_drone_disp_values = np.linspace(drone_disp_range[0],drone_disp_range[1],num = drone_disp_num)
 drone_angle_range = [0, 2*np.pi] #rango de direcciones
@@ -148,7 +154,8 @@ arr_drone_angle_values = np.linspace(drone_angle_range[0],drone_angle_range[1],n
 
 #cartesian product (displacement, direction):
 cartesian_action = np.array(list(itertools.product(arr_drone_disp_values,arr_drone_angle_values)))
-encode_action = np.arange(cartesian_action.shape[0])
+#append action hovering (mag : 0, angle : 0)
+cartesian_action = np.concatenate([cartesian_action,np.zeros([1,2])],axis = 0)
 
 #E-greedy policy
 prob_epsilon = 0.0
@@ -183,10 +190,11 @@ r = environment.environment(boundaries,initial_conditions=initial_conditions,sho
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 state_dimension = 6
-gamma =1.0
+gamma =.995
+
 #reward characteristics...
-weight_data_rate = 2.5
-weight_rel_dist = 0.3
+weight_data_rate = 5
+weight_rel_dist = 0.15
 penalize_drone_out_range = 1
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
@@ -218,8 +226,17 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
 obj_process_mob_trans_gu.setStopProcess()
 
-pretrained_model_path = "C:/Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/26_09_2023/model 1 v2/"
-pretrained_model_filename = "model_1_v2--51.keras"
+if platform == "linux":
+      working_path = "/mnt/c/"
+else: #windows
+      working_path = "C:/"
+
+working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator",
+"Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
+"Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
+
+pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v4/"
+pretrained_model_filename = "model_1_v4--6.keras"
 
 
 #data = DQN.load_info_data(pretrained_model_path + "model_1_v2_data.txt")
@@ -227,16 +244,16 @@ pretrained_model_filename = "model_1_v2--51.keras"
 #load model test...
 
 num_episodes = 2500
-batch_size = 700
-train_max_iter = 150
+batch_size = 500
+train_max_iter = 15
 save_interval_premodel = 2000
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel,pretrained_model_path + pretrained_model_filename)
+                         save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
 
 
 
 # test model...
-test_performance_model(dqn_agent,r, PositionController = unicycle_position_controller,RewardFunc = rewardFunc2,
+test_performance_model(dqn_agent,r, PositionController = unicycle_position_controller,RewardFunc = rewardFunc,
                             WeightDataRate = weight_data_rate,
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range)

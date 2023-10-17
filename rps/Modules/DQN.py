@@ -148,6 +148,13 @@ def plot_rewards(data):
     axs[1].set_ylabel("time (s)")
     plt.show()
 
+#working_path = "C:/"
+#pretrained_path = working_path + "Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/1 Drone 2D GUs/robotarium_python_simulator/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v4/"
+#pretrained_name = "model_1_v4"
+#pretrained_data_filename = "model_1_v4_data"
+
+#data = load_info_data(pretrained_path + pretrained_data_filename + ".txt")
+#plot_rewards(data)
 #-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
 
 class DQNAgent:

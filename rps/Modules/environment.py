@@ -14,10 +14,13 @@ class environment(robotarium.Robotarium):
     así como sus respectivas clases
     """
     def __init__(self,boundaries, initial_conditions, show_figure=True, sim_in_real_time=True,**kwargs):
-        super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,Rc = kwargs["Rc"],
-        FaceColor = kwargs["FaceColor"], PoseGu = kwargs["PoseGu"], GuRadius = kwargs["GuRadius"], GuColorList = kwargs["GuColorList"],
-        PlotDataRate = kwargs["PlotDataRate"], MaxGuDist = kwargs["MaxGuDist"],MaxGuData = kwargs["MaxGuData"],
-        StepGuData = kwargs["StepGuData"])
+        super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
+
+
+        #super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,Rc = kwargs["Rc"],
+        #FaceColor = kwargs["FaceColor"], PoseGu = kwargs["PoseGu"], GuRadius = kwargs["GuRadius"], GuColorList = kwargs["GuColorList"],
+        #PlotDataRate = kwargs["PlotDataRate"], MaxGuDist = kwargs["MaxGuDist"],MaxGuData = kwargs["MaxGuData"],
+        #StepGuData = kwargs["StepGuData"])
 
 
     def stepEnv(self,action,pose_eval,unicycle_position_controller,reward_func,weight_dr,weight_dis,drone_boundaries_penalization,

@@ -54,30 +54,28 @@ class RobotariumABC(ABC):
         self.reset_env = False
 
         #create the object containing the data for all the drones
-        self.createDrones(Rc = kwargs["Rc"], FaceColor = kwargs["FaceColor"])
+        self.createDrones(**kwargs)
 
         #generate drones visual effects
         self.generateVisualRobots()
 
         #create gus visual effects and obj
-        self.createGUs(PoseGu = kwargs["PoseGu"], GuRadius = kwargs["GuRadius"], GuColorList = kwargs["GuColorList"],
-                       PlotDataRate = kwargs["PlotDataRate"], MaxGuDist = kwargs["MaxGuDist"],MaxGuData = kwargs["MaxGuData"],
-            StepGuData = kwargs["StepGuData"])
+        self.createGUs(**kwargs)
         
         self.left_led_commands = []
         self.right_led_commands = []
 
     #------------------------------------ FUNCTIONS RELATED TO DRONES -----------------------------------------------#
 
-    def showDrones(self,**args):
+    def showDrones(self,**kwargs):
         """
         esta funcion permite generar los circulos que emulan el comportamiento rc de cada drone
         """
-        i = args["Index"]
-        center_rc = args["Pose"][:2,i] #index i is for robot i
+        i = kwargs["Index"]
+        center_rc = kwargs["Pose"][:2,i] #index i is for robot i
 
-        self.robots_rc_circles.append(patches.Circle(center_rc,args["Rc"],fill = False,
-        facecolor = args["FaceColor"]))
+        self.robots_rc_circles.append(patches.Circle(center_rc,kwargs["Rc"],fill = False,
+        facecolor = kwargs["FaceColor"]))
 
         self.axes.add_patch(self.robots_rc_circles[i])
 
@@ -120,11 +118,11 @@ class RobotariumABC(ABC):
             plt.show()
 
 
-    def showGUs(self, **args):
+    def showGUs(self, **kwargs):
         """
         funciones necesarias para crear tanto al gu, como su texto de data transmission
         """
-        i = args["Index"]
+        i = kwargs["Index"]
         self.gu_patches.append(patches.Circle(self.obj_gus.poses[:2,i],self.obj_gus.visual_radius,fill = True,
         facecolor = self.obj_gus.gus_list_colors[i]))
         self.axes.add_patch(self.gu_patches[i])
@@ -135,7 +133,7 @@ class RobotariumABC(ABC):
                                                           0.0))
 
 
-    def createGUs(self, **args):
+    def createGUs(self, **kwargs):
         """
         esta funcion permitira crear los objetos gus, asi como mostrarlos en el ambiente.
         """
@@ -143,13 +141,13 @@ class RobotariumABC(ABC):
         self.gu_patches = []
         self.gu_tb_data = []
 
-        num_gus = args["PoseGu"].shape[1]
-        self.obj_gus = gu.GroundUser(["Gu_" + str(i) for i in range(num_gus)],args["PoseGu"],args["GuRadius"],
-                                     args["GuColorList"],args["PlotDataRate"],args["MaxGuDist"],args["MaxGuData"],
-                                     args["StepGuData"])
+        num_gus = kwargs["PoseGu"].shape[1]
+        self.obj_gus = gu.GroundUser(["Gu_" + str(i) for i in range(num_gus)],kwargs["PoseGu"],kwargs["GuRadius"],
+                                     kwargs["GuColorList"],kwargs["PlotDataRate"],kwargs["MaxGuDist"],kwargs["MaxGuData"],
+                                     kwargs["StepGuData"])
 
         for i in range(num_gus):
-            #obj_list_gus[i].setDistanceToDrone(args["PoseDrone"])
+            #obj_list_gus[i].setDistanceToDrone(kwargs["PoseDrone"])
             if self.show_figure:
                 self.showGUs(Index = i)
 
