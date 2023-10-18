@@ -7,20 +7,38 @@ import rps.Modules.gu as gu
 import rps.Modules.mobileagent as mobileagent
 import rps.Modules.misc as misc
 import time
+import tf_agents
+from tf_agents.environments import py_environment
+from tf_agents.environments import tf_environment
+from tf_agents.environments import tf_py_environment
+from tf_agents.environments import utils
+from tf_agents.specs import array_spec
+from tf_agents.environments import wrappers
+from tf_agents.environments import suite_gym
+from tf_agents.trajectories import time_step as ts
 
-class environment(robotarium.Robotarium):
+class environment(robotarium.Robotarium,py_environment.PyEnvironment):
     """
     esta superclase extendiende la funcionalidad del robotarium para poder trabajar con un ambiente integrado con GUs,
     así como sus respectivas clases
     """
-    def __init__(self,boundaries, initial_conditions, show_figure=True, sim_in_real_time=True,**kwargs):
-        super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
+    def __init__(self,boundaries, initial_conditions,state_dimension, action_space, show_figure=True, sim_in_real_time=True,**kwargs):
+        robotarium.Robotarium().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
+
+        self._action_spec = array_spec.BoundedArraySpec(shape=(action_space.shape[0],), dtype=np.int32, minimum=0,maximum=action_space.shape[0] - 1,
+                                                        name="action")
+        self._observation_spec = array_spec.BoundedArraySpec(shape=(state_dimension,), dtype=np.float64, 
+        minimum=[-4.8000002e+38] * state_dimension, maximum=[4e+38] * state_dimension, name = "observation")
+        self.counter_train_timeslot = 0
 
 
-        #super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,Rc = kwargs["Rc"],
-        #FaceColor = kwargs["FaceColor"], PoseGu = kwargs["PoseGu"], GuRadius = kwargs["GuRadius"], GuColorList = kwargs["GuColorList"],
-        #PlotDataRate = kwargs["PlotDataRate"], MaxGuDist = kwargs["MaxGuDist"],MaxGuData = kwargs["MaxGuData"],
-        #StepGuData = kwargs["StepGuData"])
+    #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
+    def action_spec(self):
+        return self._action_spec
+
+    def observation_spec(self):
+        return self._observation_spec
+    #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
 
 
     def stepEnv(self,action,pose_eval,unicycle_position_controller,reward_func,weight_dr,weight_dis,drone_boundaries_penalization,

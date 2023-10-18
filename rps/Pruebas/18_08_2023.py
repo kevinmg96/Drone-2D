@@ -139,10 +139,6 @@ arr_gu_pose[2,:] = 0.0
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
 
-r = environment.environment(boundaries,initial_conditions=initial_conditions,show_figure=show_figure,sim_in_real_time=True,
-    Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
-       PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data  )
-
 
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
@@ -155,6 +151,13 @@ weight_rel_dist = 0.025
 penalize_drone_out_range = 1.5
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
+
+r = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,show_figure=show_figure,sim_in_real_time=True,
+    Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
+       PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data  )
+
+print(f"action spec : {r.action_spec()}")
+print(f"observation spec : {r.observation_spec()}")
 
 # Define goal points by removing orientation from poses
 #inclui random goal points gus
