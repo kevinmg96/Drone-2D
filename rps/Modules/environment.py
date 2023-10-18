@@ -1,5 +1,6 @@
 import numpy as np
 import rps.robotarium as robotarium
+from rps.utilities.misc import *
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -9,35 +10,83 @@ import rps.Modules.misc as misc
 import time
 import tf_agents
 from tf_agents.environments import py_environment
-from tf_agents.environments import tf_environment
-from tf_agents.environments import tf_py_environment
-from tf_agents.environments import utils
 from tf_agents.specs import array_spec
 from tf_agents.environments import wrappers
 from tf_agents.environments import suite_gym
 from tf_agents.trajectories import time_step as ts
+from tf_agents.typing import types
 
 class environment(robotarium.Robotarium,py_environment.PyEnvironment):
     """
     esta superclase extendiende la funcionalidad del robotarium para poder trabajar con un ambiente integrado con GUs,
     así como sus respectivas clases
     """
-    def __init__(self,boundaries, initial_conditions,state_dimension, action_space, show_figure=True, sim_in_real_time=True,**kwargs):
-        robotarium.Robotarium().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
-
-        self._action_spec = array_spec.BoundedArraySpec(shape=(action_space.shape[0],), dtype=np.int32, minimum=0,maximum=action_space.shape[0] - 1,
+    def __init__(self,boundaries, initial_conditions,state_dimension, action_space,gamma,timeslot_train_iter_max, show_figure=True, sim_in_real_time=True,**kwargs):
+        super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
+        self.action_space = action_space
+        self.state_dimension = state_dimension
+        self._action_spec = array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0,maximum=self.action_space.shape[0] - 1,
                                                         name="action")
-        self._observation_spec = array_spec.BoundedArraySpec(shape=(state_dimension,), dtype=np.float64, 
-        minimum=[-4.8000002e+38] * state_dimension, maximum=[4e+38] * state_dimension, name = "observation")
+        self._observation_spec = array_spec.BoundedArraySpec(shape=((1,self.state_dimension)), dtype=np.float64, 
+        minimum=[-4.8000002e+38] * self.state_dimension, maximum=[4e+38] * self.state_dimension, name = "observation")
+        self.gamma = gamma
+
         self.counter_train_timeslot = 0
+        self.timeslot_train_iter_max = timeslot_train_iter_max
+        
+        self.kwargs_step_env = kwargs
+
+
 
 
     #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
+
     def action_spec(self):
         return self._action_spec
 
     def observation_spec(self):
         return self._observation_spec
+    
+
+    def _step(self,index_action):
+        
+        self.counter_train_timeslot += 1
+        
+        #extraemos la accion del esapcio de acciones
+        action = self.action_space[index_action]
+
+        #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
+                
+        next_state,reward,_ = self.stepEnv(action,at_pose,self.kwargs_step_env["PositionController"],
+        self.kwargs_step_env["RewardFunc"],self.kwargs_step_env["WeightDataRate"],self.kwargs_step_env["WeightRelDist"],self.kwargs_step_env["PenalDroneOutRange"])
+
+        if self.counter_train_timeslot == self.timeslot_train_iter_max:
+            self.counter_train_timeslot = 0
+            return ts.termination(next_state, reward)
+
+        return ts.transition(next_state, reward=reward, discount=1.0)
+
+    def _reset(self):
+        #reseteamos el ambiente y visualizador utilizando la funcion previamente definida por mi
+        self.resetEnv()
+        #set transmission rate for each gu...
+        #actualizamos estatus data tranmission y rate de los gus
+        self.obj_gus.setTransmissionRate(self.obj_gus.max_gu_data,False)
+        for k in range(self.obj_gus.poses.shape[1]):              
+                    
+            #actualizamos data transmission value en ambiente
+            if self.show_figure:
+                self.updateGUDataRate(k,self.obj_gus.transmission_rate[k])
+           
+        #actualizamos los registros del drone...
+        self.obj_drones.echoRadio(self.obj_gus)
+
+        #get initial state
+        current_state = self.getState()
+            
+        is_next_state_terminal = False
+        return ts.restart(current_state)
+
     #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
 
 
@@ -232,7 +281,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
         normalizaremos los valores entre [0 y 1] para los valores de data rate
         """  
-        env_state = np.zeros([1,6])
+        env_state = np.zeros([1,6],dtype=np.float64)
         env_state[0,0] = self.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
         env_state[0,1] = self.obj_drones.dict_gu[0]["Gu_0"]["Connection"]
         env_state[0,2] = np.interp(self.obj_gus.transmission_rate[0], [0,self.obj_gus.max_gu_data],[0, 1])

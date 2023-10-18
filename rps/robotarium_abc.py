@@ -188,7 +188,7 @@ class RobotariumABC(ABC):
             
             for i in range(self.number_of_robots):
                 p = patches.Rectangle((self.obj_drones.poses[:2, i]+self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]+math.pi/2), np.sin(self.obj_drones.poses[2, i]+math.pi/2)))+\
-                                                0.04*np.array((-np.sin(self.obj_drones.poses[2, i]+math.pi/2), np.cos(self.obj_drones.poses[2, i]+math.pi/2)))), self.robot_length, self.robot_width, (self.obj_drones.poses[2, i] + math.pi/4) * 180/math.pi, facecolor='#FFD700', edgecolor='k')
+                                                0.04*np.array((-np.sin(self.obj_drones.poses[2, i]+math.pi/2), np.cos(self.obj_drones.poses[2, i]+math.pi/2)))), self.robot_length, self.robot_width,angle= (self.obj_drones.poses[2, i] + math.pi/4) * 180/math.pi, facecolor='#FFD700', edgecolor='k')
 
                 rled = patches.Circle(self.obj_drones.poses[:2, i]+0.75*self.robot_length/2*np.array((np.cos(self.obj_drones.poses[2, i]), np.sin(self.obj_drones.poses[2, i]))+0.04*np.array((-np.sin(self.obj_drones.poses[2, i]+math.pi/2), np.cos(self.obj_drones.poses[2, i]+math.pi/2)))),
                                        self.robot_length/2/5, fill=False)
