@@ -15,6 +15,7 @@ from tf_agents.environments import wrappers
 from tf_agents.environments import suite_gym
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
+from copy import deepcopy
 
 class environment(robotarium.Robotarium,py_environment.PyEnvironment):
     """
@@ -54,6 +55,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
         
         #extraemos la accion del esapcio de acciones
         action = self.action_space[index_action]
+        #print(f"action : {action}, index  : {index_action}")
 
         #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
                 
@@ -61,10 +63,14 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
         self.kwargs_step_env["RewardFunc"],self.kwargs_step_env["WeightDataRate"],self.kwargs_step_env["WeightRelDist"],self.kwargs_step_env["PenalDroneOutRange"])
 
         if self.counter_train_timeslot == self.timeslot_train_iter_max:
+            
+            print("terminate state...")
+            print(f"number of timeslots performed : {self.counter_train_timeslot}")
             self.counter_train_timeslot = 0
+            #print(ts.termination(next_state, reward))
             return ts.termination(next_state, reward)
-
-        return ts.transition(next_state, reward=reward, discount=1.0)
+        #print(ts.transition(next_state, reward=reward, discount=1.0))
+        return ts.transition(next_state, reward=reward, discount=self.gamma)
 
     def _reset(self):
         #reseteamos el ambiente y visualizador utilizando la funcion previamente definida por mi
@@ -85,7 +91,19 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
         current_state = self.getState()
             
         is_next_state_terminal = False
+        #print(ts.restart(current_state))
         return ts.restart(current_state)
+    
+    def render(self):
+        #esta funcion permitira extraer la lista con las imagenes del ambiente guardadas.
+
+        images = deepcopy(self.env_images_as_array)
+        #print(f"images to render list shape _ {len(images)}")
+        #print(f"images shape : {images[0].shape}")
+        self.env_images_as_array = []
+        return images
+        
+
 
     #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
 

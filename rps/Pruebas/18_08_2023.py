@@ -92,7 +92,7 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
-show_figure = False
+show_figure = True
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
