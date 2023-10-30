@@ -13,6 +13,7 @@ from rps.utilities.transformations import *
 from rps.utilities.barrier_certificates import *
 from rps.utilities.misc import *
 from rps.utilities.controllers import *
+import rps.Modules.myenv_tf_agents as myenv_tf_agents
 
 import numpy as np
 import time
@@ -25,68 +26,18 @@ import itertools
 import pickle
 from sys import platform
 
+import tensorflow
+from tensorflow import keras
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential,load_model
 
-
-def rewardFunc(env,weight_dr,weight_dis):
-        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
-        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
-        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
-        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
-        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
-
-        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
-                            trans_rate_tot)
-
-        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
-
-        reward = weight_dr * sum_dr + weight_dis * sum_dis
-        return reward
-
-
-
-def rewardFunc2(env,weight_dr,weight_dis):
-        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
-        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
-        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
-        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
-        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
-
-        sum_conec = conec_1 + conec_2
-
-
-        sum_dr = (env.obj_gus.transmission_rate[0]/trans_rate_tot) + (env.obj_gus.transmission_rate[1]/trans_rate_tot)
-
-        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
-        reward = sum_conec + weight_dr * sum_dr + weight_dis * sum_dis
-
-        return reward
-
-def rewardFunc3(env,weight_dr,weight_dis):
-        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
-        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
-        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
-        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
-        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
-
-        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
-                            trans_rate_tot)
-
-        sum_dis = ((env.obj_drones.rc - dis_1) / env.obj_drones.rc) + ((env.obj_drones.rc - dis_2) / env.obj_drones.rc)
-
-        reward = weight_dr * sum_dr #+ weight_dis * sum_dis
-        return reward
-
-#-------------------------------------------------------------------------------------------
 
 # -----------------------------------------TEST MODEL ----------------------------------------------------------------------#
 
-def test_performance_model(dqn_agent,env,**args):
+def test_performance_model(dqn_agent,env):
     while True:
         #reseteamos el ambiente, al inicio de cada episodio...
         env.resetEnv()
-            
-        #actualizamos los registros del drone...
-        env.obj_drones.echoRadio(env.obj_gus)
 
         #set transmission rate for each gu...
         #actualizamos estatus data tranmission y rate de los gus
@@ -96,13 +47,15 @@ def test_performance_model(dqn_agent,env,**args):
             #actualizamos data transmission value en ambiente
             if env.show_figure:
                 env.updateGUDataRate(k,env.obj_gus.transmission_rate[k])
+        
+        #actualizamos los registros del drone...
+        env.obj_drones.echoRadio(env.obj_gus)
 
         #get initial state
         current_state = env.getState()
         is_next_state_terminal = False
 
         rewards_per_episode = []
-        counter_train_timeslot = 0
 
         while dqn_agent.counter_train_timeslot < dqn_agent.timeslot_train_iter_max: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
             
@@ -110,8 +63,9 @@ def test_performance_model(dqn_agent,env,**args):
             index_action, action = dqn_agent.selectAction(current_state)
 
             #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-            next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,args["PositionController"],
-                    args["RewardFunc"],args["WeightDataRate"],args["WeightRelDist"],args["PenalDroneOutRange"])
+            next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,env.kwargs_step_env["PositionController"],
+                env.kwargs_step_env["RewardFunc"],env.kwargs_step_env["WeightDataRate"],env.kwargs_step_env["WeightRelDist"],
+                env.kwargs_step_env["PenalDroneOutRange"])
             
             #if gus in terminal state
             #if is_next_state_terminal:
@@ -182,12 +136,6 @@ arr_gu_pose[2,:] = 0.0
 
 #----------------------------------------------GU characteristics ---------------------------------------------------------------#
 
-r = environment.environment(boundaries,initial_conditions=initial_conditions,show_figure=show_figure,sim_in_real_time=True,
-    Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
-       PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data  )
-
-
-
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 state_dimension = 6
 gamma =.995
@@ -196,18 +144,20 @@ gamma =.995
 weight_data_rate = 5
 weight_rel_dist = 0.15
 penalize_drone_out_range = 1
-#----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
-# Define goal points by removing orientation from poses
-#inclui random goal points gus
-goal_points_robots = np.array(np.mat('0.35 1.2 0.95 1.4 2.5; 1.0 0.25 1.75 1.5 0.15; 0 0 0 0 0'))
-goal_points_gus = np.array(np.mat('0.75 2.3; 0.35 0.47; 0 0'))#generate_initial_conditions(num_gus)
+train_max_iter = 30
+#----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
 # Create unicycle position controller
 unicycle_position_controller = create_clf_unicycle_position_controller()
 
-# Create barrier certificates to avoid collision
-#uni_barrier_cert = create_unicycle_barrier_certificate()
+r = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,train_max_iter,show_figure=show_figure,sim_in_real_time=True,
+    Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
+       PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
+                            RewardFunc = myenv_tf_agents.rewardFunc3,
+                            WeightDataRate = weight_data_rate,
+                            WeightRelDist = weight_rel_dist,
+                            PenalDroneOutRange = penalize_drone_out_range  )
 
 #initialize position of robots...
 if show_figure:
@@ -235,8 +185,8 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v4/"
-pretrained_model_filename = "model_1_v4--6.keras"
+pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v3/"
+pretrained_model_filename = "model_1_v3_weights.keras"
 
 
 #data = DQN.load_info_data(pretrained_model_path + "model_1_v2_data.txt")
@@ -245,7 +195,7 @@ pretrained_model_filename = "model_1_v4--6.keras"
 
 num_episodes = 2500
 batch_size = 500
-train_max_iter = 15
+
 save_interval_premodel = 2000
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
                          save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
@@ -253,8 +203,5 @@ dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilo
 
 
 # test model...
-test_performance_model(dqn_agent,r, PositionController = unicycle_position_controller,RewardFunc = rewardFunc,
-                            WeightDataRate = weight_data_rate,
-                            WeightRelDist = weight_rel_dist,
-                            PenalDroneOutRange = penalize_drone_out_range)
+test_performance_model(dqn_agent,r)
 

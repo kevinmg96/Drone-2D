@@ -64,8 +64,8 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
         if self.counter_train_timeslot == self.timeslot_train_iter_max:
             
-            print("terminate state...")
-            print(f"number of timeslots performed : {self.counter_train_timeslot}")
+            #print("terminate state...")
+            #print(f"number of timeslots performed : {self.counter_train_timeslot}")
             self.counter_train_timeslot = 0
             #print(ts.termination(next_state, reward))
             return ts.termination(next_state, reward)
@@ -212,7 +212,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
         p_distribution = [0.45,0.55]
         next_reset_env = np.random.choice(next_reset_distribution,p=p_distribution)
 
-        bool_random_gus = np.where(next_reset_env < 0.5,True,False)
+        bool_random_gus = np.where(next_reset_env < 0.9,True,False)
    
 
         if bool_random_gus:

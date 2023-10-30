@@ -159,4 +159,13 @@ def collect_step(environment, policy, buffer):
     traj = trajectory.from_transition(time_step, action_step, next_time_step)
     buffer.add_batch(traj)
 
+def save_tf_weights_to_keras_model_weights(tf_kernel_biases, keras_model,filepath):
+  #update keras model weights with trained tf model q network from tf-agents
+  for i in range(len(keras_model.layers)):
+      keras_model.layers[i].kernel.assign(tf_kernel_biases[2 *i])
+      keras_model.layers[i].bias.assign(tf_kernel_biases[2 * i+1])
+
+  #save keras model weights...
+  keras_model.save_weights(filepath)
+
 

@@ -80,10 +80,14 @@ class Robotarium(RobotariumABC):
                                                                 self.gu_tb_data[i].get_position()))
 
                 
-                self.image_to_rgba()
-                self.env_images_as_array.append(self.rgba_array)
-
+                #self.image_to_rgba()
+                #self.env_images_as_array.append(self.rgba_array)
                 #print(f"debug rgb image: {self.rgba_array[self.rgba_array.shape[0] // 2 -1: self.rgba_array.shape[0] // 2 + 2,self.rgba_array.shape[1] // 2 -3: self.rgba_array.shape[1] // 2 + 4,0]}")
 
+
+                self.figure.canvas.draw_idle()
+                self.figure.canvas.flush_events()
+
+                
 
 

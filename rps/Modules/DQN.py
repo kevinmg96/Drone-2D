@@ -187,9 +187,9 @@ class DQNAgent:
 
         #create q network NN model
         self.loss_function = self.my_loss_fn
-        if model_full_path == "": #create q network from scratch
-            self.q_network = self.createNetwork()
-        else: #load pretrained model
+
+        self.q_network = self.createNetwork()
+        if model_full_path != "": #load pretrained model weights          
             self.load_keras_model(model_full_path)
 
 
@@ -203,7 +203,8 @@ class DQNAgent:
         self.actionsAppend=[]
     
     def load_keras_model(self,model_full_path):
-        self.q_network = load_model(model_full_path,compile=False)
+        #self.q_network = load_model(model_full_path,compile=False)
+        self.q_network.load_weights(model_full_path)
         self.q_network.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
 
 
@@ -243,7 +244,7 @@ class DQNAgent:
         model=Sequential()
         model.add(Dense(128,input_dim = self.state_dimension,activation='relu')) #añadir aqui state dimmension
         model.add(Dense(56,activation='relu'))
-        model.add(Dense(self.action_space.shape[0],activation='linear'))
+        model.add(Dense(self.action_space.shape[0],activation=None))
         # compile the network with the custom loss defined in my_loss_fn
         model.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
         return model

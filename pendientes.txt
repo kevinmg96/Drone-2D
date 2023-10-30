@@ -1,22 +1,4 @@
 ---------------------------------------------- PENDIENTES -----------------------------------
-current objectives: max gu data rate
-fecha: 11/09/2023
-Pendientes DRONE2D single objective function 2 GUS DQN ..
-revisar reward function
-tengo muchas variables y objetos para almacenar la misma data (ej: gus, drone pos) modificare el codigo del robotarium para funcioanr
-con mis metodologias de programacion. listo.
-desarrollar el modulo para testear el algoritmo DQN entrenado. listo
-grabar backups del archivo pickle que guarda los meanrewards por episodio. listo
-optimizar el codigo ya que los entrenamientos estan costando demasiada memoria RAM. cada ciertos training steps los mean rewards por
-episodio son guardados en un archivo. no encontre otra forma de reducir el costo computacional de tiempo
-
-
-
-prob.e modelo v2 30 y 34, al inicio el drone es capaz de quedarse estacionario ya que sabe que los gus estan en su rango rc. sin embargo,
-cuando uno de los gus se aleja, en ocasiones sigue al gu con mayor data rate, y en otras ocasiones se queda con el de menor data rate.
-pero lo que siempre pasa despues de varias iteraciones, es que el drone decide alejarse bastante de los gus (fuera de rango rc).
-falta mejorar entrenamiento.
-
 ideas finalizar episodio de training:
 1.- si algun gu o drone sobrepasan el area de entrenamiento (current)
 2.- si drone se sobrepasa, penalizar reward func y no ejecutar dicha accion. si gu se pasa, end training
@@ -54,49 +36,21 @@ listo
 6.-reestructurar reward function. listo
 7.- state space: incluir drone position, gus positions,listo
 
-me falta guardar el tiempo de ejecucion por epoca. imprimirlo mientras entrena o guardarlo en un archivo. LISTO
-pendientes:
-optimizar sistema
-realizar entrenamientos en google colab y evaluar tiempo por epoca. en paralelo, tratar de hacer funcionar alguna biblioteca de rl para el entrenamiento.
 
-#------------------------- PENDIENTES REVISION COMPLETA DEL SISTEMA PARA OPTIMIZARLO ---------------------------------------------------------------- ######
-funciones revision a detalle pendiente:
-misc.poissonchoice deprecated, ahora desplazo una funcion gausiiana para simular una distribucion poisson
-misc.gaussianchoice
-environment.resetenv
+#---------------------------------------------------- PRUEBA FECHA : 10/10/2023 ENTRENAMIENTO SISTEMA USANDO TF-GENTS------------------------------------------------------------------------ #####
 
-parece ser que este conjunto de funciones requiere de mejorar sus tiempos.
-parece ser que la funcion trainnetowrk es la que toma mucho tiempo. para 100 epocas toma ~.3 s, lo que incrementa exponencialmente el tiempo con el numero
-de training slots y training eppochs. parece ser que trainnetwork() era mas rapido con CPU que con GPU.
+* durante los primeros episodios del testing, pudimos observar como el drone navega rumbo hacia los gus, sin embargo hubo casos donde los cuales, si los gus estan bastante separados, el drone se
+inclina por el de mayor data rate (comportamiento deseado). de lo contrario, cuando estan muy cercanos, el drone visita uno y despues al otro. 
+* Despues de ciertos numero de episodios, observamos que el agente es incapaz de escoger buenas posiciones, no se acerca a nigun gu.
+* Cuando si se acercaba a los gus, notamos que toma ciertas decisiones que no son las optimas. Teoria: penalizar el numero de pasos que le toma al drone llegar a darle serivcio a algun gu.
+* En ocasiones, da a aentender que el drone sabe que cuando esta con gu debe de ejecutar la accion de no moverse. Sin embargo, en otras ocaciones no. Teoria: agregando la penalizacion por numero de pasos
+creemos que, una vez llegue con un gu, este sabra que debera quedarse estatico por el resto del episodio, para maximizar reward.
+* ayudaremos un poco a vencer la incertidumbre entre penalizaciones y rewards aumentando el weight data rate.
 
-train network execution time:
-GPU windows 12/10/2023 : ~.45s
-GPU linux 12/10/2023 : ~.65s
-CPU colab 12/10/2023 : ~0.8s
-GPU colab 12/10/2023 : ~0.78-1.5s
+#---------------------------------------------------- PRUEBA FECHA : 29/10/2023 ENTRENAMIENTO SISTEMA USANDO TF-GENTS------------------------------------------------------------------------ #####
 
-Episode running time:
-CPU windows 12/10/2023 : ~32s batch 500 
-GPU windows 15/10/2023 : ~2min al episodio 800
-
-funcino resetenv toma aprox 0.03 s. no es mucho. probablemente optimizando poisonchoice mejore el tiempo. tiempo mejoro a .001s
-
-prueba: entrenar codigo en google colab (ya incluye gpu) y ver si el tiempo de entrenamiento reduce. prueba realizada: no mejoro. tiempo de exec por episodio: ~60s
-
-NOTA: el sistema de entrenamiento como esta definido hasta ahora parece correr mas rapido en GPU despues de cierto numero de episodios de entrenamiento. no como en
-CPU donde aprox despues de 150 episodios, crece el tiempo de entrenamiento cuadratico.
+* La red neuronal claramente hace overfitting. Produciendo un comportamiento atipico, donde el agente solo toma tres decicions, avanzar hacia adelante, retroceder o permane
+cer quieto. El origen de este comportamiento no me es claro.
 
 
-en la bestia. se queda sin memoria RAM al episodio 800
-parece ser que usar np.random.default_rng().choice es mas eficiente que random.sample ,  
-tratar de implementar train_network usando arregloes en vez de ciclos for.
-el entrenamiento de la red neuronal tratare de hacerlo usando parallel computing.
-hacer funcionar tf-agents con mi ambiente
-probar eficiencia del replay buffer propuesto por tf-agents
 
-pruebas optimizando replay buffer:
-100,000 samples k = 10000
-random.sample ~ 0.3s
-rigged buffer ~.002s
-
-#------------------------- PENDIENTES REVISION COMPLETA DEL SISTEMA PARA OPTIMIZARLO ---------------------------------------------------------------- ######

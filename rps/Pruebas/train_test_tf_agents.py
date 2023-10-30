@@ -34,6 +34,8 @@ from sys import platform
 import glob
 import re
 import os
+import h5py
+import json
 
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.drivers import py_driver
@@ -43,7 +45,7 @@ from tf_agents.eval import metric_utils
 from tf_agents.metrics import tf_metrics
 from tf_agents.networks import sequential
 from tf_agents.policies import py_tf_eager_policy
-from tf_agents.policies import random_tf_policy
+from tf_agents.policies import random_tf_policy,epsilon_greedy_policy
 from tf_agents.replay_buffers import reverb_replay_buffer
 from tf_agents.replay_buffers import reverb_utils
 from tf_agents.policies import policy_saver
@@ -54,14 +56,17 @@ from tf_agents.networks import q_network
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.metrics import py_metrics
 import reverb
-
+import tf_agents
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential,load_model
+from tensorflow.keras.models import Sequential,load_model,model_from_json
 from tensorflow.keras.optimizers import RMSprop,Adam
 from tensorflow import gather_nd
 from tensorflow.keras.losses import mean_squared_error
+import keras
+
+
 
 
 #-------------- libraries -------------------------------------------------------------------------- #######################################################
@@ -73,7 +78,7 @@ initial_conditions = np.array(np.mat('0.75;1.0;0.0'))#np.mat('0.25 0.5 0.75 1 1.
 
 #dimensiones ambiente (punto origen x, punto origen y, ancho, alto)
 boundaries = [0,0,3.2,2.0]
-show_figure = True
+show_figure = False
 
 #--------------------------------------------Drone Characteristics ---------------------------------------------------------- #
 rc = 0.5 #radio de comunicaciones en m
@@ -124,12 +129,12 @@ arr_gu_pose[2,:] = 0.0
 
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 state_dimension = 6
-gamma = 1.0
+gamma =0.995
 
 #reward characteristics...
 weight_data_rate = 1.0
 weight_rel_dist = 0.025
-penalize_drone_out_range = 1.0
+penalize_drone_out_range = 0.5
 
 train_max_iter = 80
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
@@ -168,7 +173,7 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Pretrained/DQN single agent-multi objective/10_10_2023/model 1 v8/"
+trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v4/"
 
 #model = load_model(trained_premodel_path + 'saved_model.pb',compile = False)
 
@@ -178,34 +183,37 @@ bool_use_gpu = True
 if  not bool_use_gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+
 #------------------------------- SETTING WORKING PATH AND PROCESSORS ----------------------------- ###################################################
 
 
 # Rest of Hyperparameters
-num_iterations = 1000 # @param {type:"integer"}
+num_iterations = 100000 # @param {type:"integer"}
 
-initial_collect_steps = train_max_iter  # @param {type:"integer"}
+initial_collect_steps =10 * train_max_iter  # @param {type:"integer"}
 collect_steps_per_iteration =   1# @param {type:"integer"}
-replay_buffer_max_length = 10000  # @param {type:"integer"}
+replay_buffer_max_length = 120000  # @param {type:"integer"}
 n_step_update = 2
 
-batch_size = 100  # @param {type:"integer"}
+batch_size = 2200  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
-log_interval = 100  # @param {type:"integer"}
+log_interval = 25000  # @param {type:"integer"}
 
 num_eval_episodes = 50  # @param {type:"integer"}
-eval_interval = 100  # @param {type:"integer"}
+eval_interval = 25000  # @param {type:"integer"}
 
 
 
 # fully connected layer architecture
-fc_layer_params = (128,56 )
+fc_layer_params = (50,28,12 )
+output_layer_activation_function = keras.activations.linear
 
 # defining q network using train_env and fully connected layer architecture
 q_net = q_network.QNetwork(
     train_tf_robotarium.observation_spec(),
     train_tf_robotarium.action_spec(),
-    fc_layer_params=fc_layer_params
+    fc_layer_params=fc_layer_params,
+    q_layer_activation_fn=output_layer_activation_function
 )
 
 # adam optimizer to do the training
@@ -222,8 +230,7 @@ agent = dqn_agent.DqnAgent(
     optimizer=optimizer,
     td_errors_loss_fn=common.element_wise_squared_loss,
     gamma=gamma,
-    train_step_counter=global_step
-
+    train_step_counter=global_step,epsilon_greedy= 0.1
 )
 
 # initialize the agent
@@ -234,28 +241,62 @@ random_policy = random_tf_policy.RandomTFPolicy(train_tf_robotarium.time_step_sp
                                                 train_tf_robotarium.action_spec())
 
 
+
 #----------------------------------------------------------- DATA COLLECTION --------------------------------------------------------- ############
 
-replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
-    data_spec=agent.collect_data_spec,
-    batch_size=train_tf_robotarium.batch_size,
-    max_length=replay_buffer_max_length)
 
+table_name = 'uniform_table'
+replay_buffer_signature = tensor_spec.from_spec(
+      agent.collect_data_spec)
+replay_buffer_signature = tensor_spec.add_outer_dim(
+    replay_buffer_signature)
 
+table = reverb.Table(
+    table_name,
+    max_size=replay_buffer_max_length,
+    sampler=reverb.selectors.Uniform(),
+    remover=reverb.selectors.Fifo(),
+    rate_limiter=reverb.rate_limiters.MinSize(1),
+    signature=replay_buffer_signature)
 
-for _ in range(initial_collect_steps):
-  myenv_tf_agents.collect_step(train_tf_robotarium, random_policy,replay_buffer)
+reverb_server = reverb.Server([table])
 
-# This loop is so common in RL, that we provide standard implementations of
-# these. For more details see the drivers module.
+replay_buffer = reverb_replay_buffer.ReverbReplayBuffer(
+    agent.collect_data_spec,
+    table_name=table_name,
+    sequence_length=2,
+    local_server=reverb_server)
 
-# Dataset generates trajectories with shape [BxTx...] where
-# T = n_step_update + 1.
+rb_observer = reverb_utils.ReverbAddTrajectoryObserver(
+  replay_buffer.py_client,
+  table_name,
+  sequence_length=2)
+
+debug_driver = False
+buffer = []
+metric = py_metrics.AverageReturnMetric()
+
+py_driver.PyDriver(
+    train_py_robotarium,
+    py_tf_eager_policy.PyTFEagerPolicy(
+      random_policy, use_tf_function=True),
+    [rb_observer] if not debug_driver else [rb_observer] + [buffer.append,metric],
+    max_steps=initial_collect_steps).run(train_py_robotarium.reset())
+
+if debug_driver:
+    print('Replay Buffer:')
+    for traj in buffer:
+        print(traj)
+
+    print('Average Return: ', metric.result())
+
 dataset = replay_buffer.as_dataset(
-    num_parallel_calls=3, sample_batch_size=batch_size,
-    num_steps=n_step_update).prefetch(3)
+    num_parallel_calls=3,
+    sample_batch_size=batch_size,
+    num_steps=2).prefetch(3)
 
 iterator = iter(dataset)
+
 
 #----------------------------------------------------------- DATA COLLECTION --------------------------------------------------------- ############
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
@@ -279,10 +320,28 @@ train_checkpointer = common.Checkpointer(
 train_checkpointer.initialize_or_restore()
 global_step = tf.compat.v1.train.get_global_step()
 
+#create neural network
+def createNetwork():
+        """
+        esta funcion permitira crear la estructura de las redes DNN para este agente DQN
+        """
+        model=Sequential()
+        model.add(Dense(128,input_dim = state_dimension,activation='relu')) #añadir aqui state dimmension
+        model.add(Dense(56,activation='relu'))
+        model.add(Dense(cartesian_action.shape[0],activation=None))
+        # compile the network with the custom loss defined in my_loss_fn
+        #model.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
+        return model
+
+
+#save tf weights into keras model
+#myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),createNetwork(),trained_premodel_path + "model_1_v3_weights.keras")
+
+
+      
 #print(f"tf network weights after loading checkpoint : {agent._q_network.get_weights()}")
 
 #---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
-
 
 
 
@@ -290,26 +349,42 @@ global_step = tf.compat.v1.train.get_global_step()
 avg_return = myenv_tf_agents.compute_avg_return(eval_tf_robotarium, agent.policy, num_eval_episodes)
 returns = [avg_return]
 
+# Reset the environment.
+time_step = train_py_robotarium.reset()
+
+# Create a driver to collect experience.
+collect_driver = py_driver.PyDriver(
+    train_py_robotarium,
+    py_tf_eager_policy.PyTFEagerPolicy(
+      agent.collect_policy, use_tf_function=True),
+    [rb_observer],
+    max_steps=collect_steps_per_iteration)
+
+dataset = replay_buffer.as_dataset(
+    num_parallel_calls=3,
+    sample_batch_size=batch_size,
+    num_steps=2).prefetch(3)
+
+iterator = iter(dataset)
 
 
 for _ in range(num_iterations):
 
-  # Collect a few steps using collect_policy and save to the replay buffer.
-  for _ in range(collect_steps_per_iteration):
-    myenv_tf_agents.collect_step(train_tf_robotarium, agent.collect_policy,replay_buffer)
+  # Collect a few steps and save to the replay buffer.
+  time_step, _ = collect_driver.run(time_step)
 
   # Sample a batch of data from the buffer and update the agent's network.
   experience, unused_info = next(iterator)
-  train_loss = agent.train(experience)
+  train_loss = agent.train(experience).loss
 
   step = agent.train_step_counter.numpy()
 
   if step % log_interval == 0:
-    print('step = {0}: loss = {1}'.format(step, train_loss.loss))
+    print('step = {0}: loss = {1}'.format(step, train_loss))
 
   if step % eval_interval == 0:
     avg_return = myenv_tf_agents.compute_avg_return(eval_tf_robotarium, agent.policy, num_eval_episodes)
-    print('step = {0}: Average Return = {1:.2f}'.format(step, avg_return))
+    print('step = {0}: Average Return = {1}'.format(step, avg_return))
     returns.append(avg_return)
 
 #---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
@@ -321,19 +396,12 @@ steps = range(0, num_iterations + 1, eval_interval)
 plt.plot(steps, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Step')
+plt.savefig(trained_premodel_path + "model_1_v1--3.png")
 plt.show()
+
 # ------------------------------------------------------------ VISUALIZATION ------------------------------------------------------------ ######
 
 #save model using checkpointer
-
-train_checkpointer = common.Checkpointer(
-    ckpt_dir=trained_premodel_path,
-    max_to_keep=1,
-    agent=agent,
-    policy=agent.policy,
-    replay_buffer=replay_buffer,
-    global_step=global_step
-)
 
 train_checkpointer.save(global_step)
 
@@ -341,6 +409,6 @@ train_checkpointer.save(global_step)
 
 
 #------------------------------------------------------ EVALUATING POLICIY ------------------------------------------------------------------- ###
-#myenv_tf_agents.create_policy_eval_video(agent.policy,trained_premodel_path + "trained-agent",eval_tf_robotarium,eval_py_robotarium)
+#myenv_tf_agents.create_policy_eval_video(agent.policy,trained_premodel_path + "trained-agent",eval_tf_robotarium,eval_py_robotarium,5)
 
 #------------------------------------------------------ EVALUATING POLICIY ------------------------------------------------------------------- ###

@@ -97,10 +97,10 @@ class RobotariumABC(ABC):
         actualizaremos valor del data rate en ambiente...
         """
         self.gu_tb_data[gu_index].set_text(str(np.round(trans_data_rate,2)))
-        self.image_to_rgba()
-        self.env_images_as_array.append(self.rgba_array)
-        #self.figure.canvas.draw_idle()
-        #self.figure.canvas.flush_events()
+        #self.image_to_rgba()
+        #self.env_images_as_array.append(self.rgba_array)
+        self.figure.canvas.draw_idle()
+        self.figure.canvas.flush_events()
 
 
     def resetGUs(self):
@@ -121,10 +121,10 @@ class RobotariumABC(ABC):
                 self.showGUs(Index = i)
 
         if self.show_figure: #sim visual
-            self.image_to_rgba()
-            self.env_images_as_array.append(self.rgba_array)
-            #plt.ion()
-            #plt.show()
+            #self.image_to_rgba()
+            #self.env_images_as_array.append(self.rgba_array)
+            plt.ion()
+            plt.show()
 
     def image_to_rgba(self):
         self.agg.draw_idle()
@@ -188,7 +188,7 @@ class RobotariumABC(ABC):
                 #self.obj_drones.reset_drones_velocities()
             else:
                 self.figure, self.axes = plt.subplots()
-                self.agg = self.figure.canvas.switch_backends(FigureCanvasAgg)
+                #self.agg = self.figure.canvas.switch_backends(FigureCanvasAgg)
                 #print("tipo objeto figure : {}".format(type(self.figure)))
                 #print("tipo objeto axes : {}".format(type(self.axes)))
                 self.axes.set_axis_off()
@@ -232,13 +232,13 @@ class RobotariumABC(ABC):
             self.axes.set_xlim(self.boundaries[0]-0.1, self.boundaries[0]+self.boundaries[2]+0.1)
             self.axes.set_ylim(self.boundaries[1]-0.1, self.boundaries[1]+self.boundaries[3]+0.1)
 
-            #plt.ion()
-            #plt.show()
+            plt.ion()
+            plt.show()
 
             plt.subplots_adjust(left=-0.03, right=1.03, bottom=-0.03, top=1.03, wspace=0, hspace=0)
 
-            self.image_to_rgba()
-            self.env_images_as_array.append(self.rgba_array)
+            #self.image_to_rgba()
+            #self.env_images_as_array.append(self.rgba_array)
 
 
         else:
