@@ -38,6 +38,6 @@ class child(parent):
 
 c = child(RandNum = 10,Bool = True)
 c.print_data()
-
-
+print("yoo")
+print(~-False)
         

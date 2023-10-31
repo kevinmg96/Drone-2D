@@ -136,13 +136,17 @@ weight_data_rate = 1.0
 weight_rel_dist = 0.025
 penalize_drone_out_range = 0.5
 
-train_max_iter = 80
+train_max_iter = 600
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
 
 # Create unicycle position controller
 unicycle_position_controller = create_clf_unicycle_position_controller()
 
-train_py_robotarium = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,train_max_iter,show_figure=show_figure,sim_in_real_time=True,
+#creamos proceso movilidad y transmision de data gus
+obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
+obj_process_mob_trans_gu.setStopProcess()
+
+train_py_robotarium = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,obj_process_mob_trans_gu,show_figure=show_figure,sim_in_real_time=True,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
                             RewardFunc = myenv_tf_agents.rewardFunc3,
@@ -150,7 +154,7 @@ train_py_robotarium = environment.environment(boundaries,initial_conditions,stat
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range  )
 
-eval_py_robotarium = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,train_max_iter,show_figure=show_figure,sim_in_real_time=True,
+eval_py_robotarium = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,obj_process_mob_trans_gu,show_figure=show_figure,sim_in_real_time=True,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
                             RewardFunc = myenv_tf_agents.rewardFunc3,
@@ -173,7 +177,7 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v4/"
+trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v6/"
 
 #model = load_model(trained_premodel_path + 'saved_model.pb',compile = False)
 
@@ -190,22 +194,23 @@ if  not bool_use_gpu:
 # Rest of Hyperparameters
 num_iterations = 100000 # @param {type:"integer"}
 
-initial_collect_steps =10 * train_max_iter  # @param {type:"integer"}
+initial_collect_steps = train_max_iter  # @param {type:"integer"}
 collect_steps_per_iteration =   1# @param {type:"integer"}
-replay_buffer_max_length = 120000  # @param {type:"integer"}
+replay_buffer_max_length = 150000  # @param {type:"integer"}
 n_step_update = 2
 
-batch_size = 2200  # @param {type:"integer"}
+batch_size = 3500  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
-log_interval = 25000  # @param {type:"integer"}
+log_interval = 2500  # @param {type:"integer"}
+training_interval = 100 #intervalos de episodios para ejecutar el entrenamiento
 
 num_eval_episodes = 50  # @param {type:"integer"}
-eval_interval = 25000  # @param {type:"integer"}
+eval_interval = 2500  # @param {type:"integer"}
 
-
+bool_first_training_model = False #primera vez que entenaremos este modelo
 
 # fully connected layer architecture
-fc_layer_params = (50,28,12 )
+fc_layer_params = (128,56,12 )
 output_layer_activation_function = keras.activations.linear
 
 # defining q network using train_env and fully connected layer architecture
@@ -276,38 +281,29 @@ debug_driver = False
 buffer = []
 metric = py_metrics.AverageReturnMetric()
 
-py_driver.PyDriver(
-    train_py_robotarium,
-    py_tf_eager_policy.PyTFEagerPolicy(
-      random_policy, use_tf_function=True),
-    [rb_observer] if not debug_driver else [rb_observer] + [buffer.append,metric],
-    max_steps=initial_collect_steps).run(train_py_robotarium.reset())
 
-if debug_driver:
-    print('Replay Buffer:')
-    for traj in buffer:
-        print(traj)
+if bool_first_training_model: #primera vez que entrenaremos este modelo
+    py_driver.PyDriver(
+        train_py_robotarium,
+        py_tf_eager_policy.PyTFEagerPolicy(
+        random_policy, use_tf_function=True),
+        [rb_observer] if not debug_driver else [rb_observer] + [buffer.append,metric],
+        max_episodes=initial_collect_steps).run(train_py_robotarium.reset())
 
-    print('Average Return: ', metric.result())
+    if debug_driver:
+        print('Replay Buffer:')
+        for traj in buffer:
+            print(traj)
 
-dataset = replay_buffer.as_dataset(
-    num_parallel_calls=3,
-    sample_batch_size=batch_size,
-    num_steps=2).prefetch(3)
-
-iterator = iter(dataset)
+        print('Average Return: ', metric.result())
 
 
-#----------------------------------------------------------- DATA COLLECTION --------------------------------------------------------- ############
 # (Optional) Optimize by wrapping some of the code in a graph using TF function.
 agent.train = common.function(agent.train)
 
-# Reset the train step
-agent.train_step_counter.assign(0)
-
 #print(f"tf network weights prior loading checkpoint : {agent._q_network.get_weights()}")
 
-
+#-------- creamos checkpointer object para guardar los modelos entrenados
 train_checkpointer = common.Checkpointer(
     ckpt_dir=trained_premodel_path,
     max_to_keep=1,
@@ -320,45 +316,13 @@ train_checkpointer = common.Checkpointer(
 train_checkpointer.initialize_or_restore()
 global_step = tf.compat.v1.train.get_global_step()
 
-#create neural network
-def createNetwork():
-        """
-        esta funcion permitira crear la estructura de las redes DNN para este agente DQN
-        """
-        model=Sequential()
-        model.add(Dense(128,input_dim = state_dimension,activation='relu')) #añadir aqui state dimmension
-        model.add(Dense(56,activation='relu'))
-        model.add(Dense(cartesian_action.shape[0],activation=None))
-        # compile the network with the custom loss defined in my_loss_fn
-        #model.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
-        return model
-
+#create keras neural network
+q_network_keras  = myenv_tf_agents.createNetwork(state_dimension,fc_layer_params,cartesian_action.shape[0],output_layer_activation_function)
 
 #save tf weights into keras model
-#myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),createNetwork(),trained_premodel_path + "model_1_v3_weights.keras")
-
-
+myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v6_weights.keras")
       
 #print(f"tf network weights after loading checkpoint : {agent._q_network.get_weights()}")
-
-#---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
-
-
-
-# Evaluate the agent's policy once before training.
-avg_return = myenv_tf_agents.compute_avg_return(eval_tf_robotarium, agent.policy, num_eval_episodes)
-returns = [avg_return]
-
-# Reset the environment.
-time_step = train_py_robotarium.reset()
-
-# Create a driver to collect experience.
-collect_driver = py_driver.PyDriver(
-    train_py_robotarium,
-    py_tf_eager_policy.PyTFEagerPolicy(
-      agent.collect_policy, use_tf_function=True),
-    [rb_observer],
-    max_steps=collect_steps_per_iteration)
 
 dataset = replay_buffer.as_dataset(
     num_parallel_calls=3,
@@ -368,35 +332,75 @@ dataset = replay_buffer.as_dataset(
 iterator = iter(dataset)
 
 
-for _ in range(num_iterations):
+#----------------------------------------------------------- DATA COLLECTION --------------------------------------------------------- ############
+#---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
 
-  # Collect a few steps and save to the replay buffer.
-  time_step, _ = collect_driver.run(time_step)
 
-  # Sample a batch of data from the buffer and update the agent's network.
-  experience, unused_info = next(iterator)
-  train_loss = agent.train(experience).loss
 
-  step = agent.train_step_counter.numpy()
+# Evaluate the agent's policy once before training.
+#avg_return = 0.0#myenv_tf_agents.compute_avg_return(eval_tf_robotarium, agent.policy, num_eval_episodes)
+returns = []
 
-  if step % log_interval == 0:
-    print('step = {0}: loss = {1}'.format(step, train_loss))
+# Create a driver to collect experience.
+collect_driver = py_driver.PyDriver(
+    train_py_robotarium,
+    py_tf_eager_policy.PyTFEagerPolicy(
+      agent.collect_policy, use_tf_function=True),
+    [rb_observer],
+    max_steps=collect_steps_per_iteration)
 
-  if step % eval_interval == 0:
-    avg_return = myenv_tf_agents.compute_avg_return(eval_tf_robotarium, agent.policy, num_eval_episodes)
-    print('step = {0}: Average Return = {1}'.format(step, avg_return))
-    returns.append(avg_return)
+"""
+dataset = replay_buffer.as_dataset(
+    num_parallel_calls=3,
+    sample_batch_size=batch_size,
+    num_steps=2).prefetch(3)
+
+iterator = iter(dataset)
+"""
+
+for i in range(1,num_iterations + 1):
+    #number of episodes
+
+    #Reset the environment at the beginning of the episode.
+    time_step = train_py_robotarium.reset()
+
+    while not time_step.is_last():
+
+        # Collect a few steps and save to the replay buffer.
+        time_step, _ = collect_driver.run(time_step)
+
+        #step = agent.train_step_counter.numpy()
+
+    if i % training_interval == 0:
+
+        # Sample a batch of data from the buffer and update the agent's network.
+        experience, unused_info = next(iterator)
+        train_loss = agent.train(experience).loss  
+
+    if i % log_interval == 0:
+        print('step = {0}: loss = {1}'.format(i, train_loss))
+
+    if i % eval_interval == 0:
+        avg_return = myenv_tf_agents.compute_avg_return(eval_tf_robotarium, agent.policy, num_eval_episodes)
+        print('step = {0}: Average Return = {1}'.format(i, avg_return))
+        returns.append(avg_return)
+
+#create keras neural network
+q_network_keras  = myenv_tf_agents.createNetwork(state_dimension,fc_layer_params,cartesian_action.shape[0],output_layer_activation_function)
+
+#save tf weights into keras model
+myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v7_weights.keras")
 
 #---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
 
 
 # ------------------------------------------------------------ VISUALIZATION ------------------------------------------------------------ ######
 
-steps = range(0, num_iterations + 1, eval_interval)
+steps = range(1, num_iterations + 1, eval_interval)
 plt.plot(steps, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Step')
-plt.savefig(trained_premodel_path + "model_1_v1--3.png")
+plt.savefig(trained_premodel_path + "model_1_v7--1.png")
 plt.show()
 
 # ------------------------------------------------------------ VISUALIZATION ------------------------------------------------------------ ######

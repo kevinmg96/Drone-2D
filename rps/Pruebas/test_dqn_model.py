@@ -57,31 +57,37 @@ def test_performance_model(dqn_agent,env):
 
         rewards_per_episode = []
 
-        while dqn_agent.counter_train_timeslot < dqn_agent.timeslot_train_iter_max: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
+        while not is_next_state_terminal: #mientras no hemos llegado a un estado terminal, continuar iterando avanzando en el episodio
             
             #seleccionamos accion para agente de acuerdo a e greedy strategy
             index_action, action = dqn_agent.selectAction(current_state)
 
             #ejecutamos accion del DQN agent (desplazamos al drone...), retornamos new_state,reward,is_terminal_state
-            next_state,reward,is_next_state_terminal = env.stepEnv(action,at_pose,env.kwargs_step_env["PositionController"],
+            next_state,reward,_ = env.stepEnv(action,at_pose,env.kwargs_step_env["PositionController"],
                 env.kwargs_step_env["RewardFunc"],env.kwargs_step_env["WeightDataRate"],env.kwargs_step_env["WeightRelDist"],
                 env.kwargs_step_env["PenalDroneOutRange"])
             
-            #if gus in terminal state
-            #if is_next_state_terminal:
-            #    print("sali por este if")
-            #    break
+            # ejecutamos acciones de los gus
+            env.obj_process_mob_trans_gu.guProcess(env,env.kwargs_step_env["PositionController"],at_pose,False)
+
+            #actualizamos los registros del drone...
+            env.obj_drones.echoRadio(env.obj_gus)   
+
+            #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
+            drone_gu_pose = np.concatenate([env.obj_drones.poses,env.obj_gus.poses],axis = 1)
+            if env.isTerminalState(drone_gu_pose): #gu se desplazo fuera del area
+                is_next_state_terminal = True
 
             rewards_per_episode.append(reward)     
 
             current_state = next_state
                     
-            dqn_agent.counter_train_timeslot += 1
+
 
         #plot rewards..
         #DQN.plot_rewards(rewards_per_episode)
 
-        dqn_agent.counter_train_timeslot = 0
+        is_next_state_terminal = False
 
 # -----------------------------------------TEST MODEL ----------------------------------------------------------------------#
 
@@ -151,7 +157,11 @@ train_max_iter = 30
 # Create unicycle position controller
 unicycle_position_controller = create_clf_unicycle_position_controller()
 
-r = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,train_max_iter,show_figure=show_figure,sim_in_real_time=True,
+#creamos proceso movilidad y transmision de data gus
+obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
+obj_process_mob_trans_gu.setStopProcess()
+
+r = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,obj_process_mob_trans_gu,show_figure=show_figure,sim_in_real_time=True,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
                             RewardFunc = myenv_tf_agents.rewardFunc3,
@@ -159,12 +169,6 @@ r = environment.environment(boundaries,initial_conditions,state_dimension,cartes
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range  )
 
-#initialize position of robots...
-if show_figure:
-    r.step_v2(True)
-
-#creamos proceso movilidad y transmision de data gus
-obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 
 #process_mob_trans_gu = threading.Thread(target= obj_process_mob_trans_gu.guProcess, args=(r,obj_gus_list,obj_drone_list,
 #max_gu_dist, max_gu_data,step_gu_data, unicycle_position_controller,at_pose,False))
@@ -172,9 +176,6 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 #ejecutamos proceso gu
 #process_mob_trans_gu.start()
 
-#primera ejecucion del proceso cambiar la posicion de drones...
-
-obj_process_mob_trans_gu.setStopProcess()
 
 if platform == "linux":
       working_path = "/mnt/c/"
@@ -185,8 +186,8 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v3/"
-pretrained_model_filename = "model_1_v3_weights.keras"
+pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v6/"
+pretrained_model_filename = "model_1_v6_weights.keras"
 
 
 #data = DQN.load_info_data(pretrained_model_path + "model_1_v2_data.txt")
@@ -197,8 +198,11 @@ num_episodes = 2500
 batch_size = 500
 
 save_interval_premodel = 2000
-dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,train_max_iter,
-                         save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
+
+hid_layer_neurons = (128,56,12 )
+output_layer_activation_function = keras.activations.linear
+dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,hid_layer_neurons,output_layer_activation_function,
+                         train_max_iter,save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
 
 
 

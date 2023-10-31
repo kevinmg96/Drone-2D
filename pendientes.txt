@@ -48,9 +48,36 @@ creemos que, una vez llegue con un gu, este sabra que debera quedarse estatico p
 * ayudaremos un poco a vencer la incertidumbre entre penalizaciones y rewards aumentando el weight data rate.
 
 #---------------------------------------------------- PRUEBA FECHA : 29/10/2023 ENTRENAMIENTO SISTEMA USANDO TF-GENTS------------------------------------------------------------------------ #####
+MODELO 1 v3. rewardfunction3, weight_dr = 1.5, flying_ouside_penalization = 0.7, 
 
 * La red neuronal claramente hace overfitting. Produciendo un comportamiento atipico, donde el agente solo toma tres decicions, avanzar hacia adelante, retroceder o permane
 cer quieto. El origen de este comportamiento no me es claro.
 
+Combinacion de mejoras que considero implementar:
+* cambiar de algoritmo de entrenamiento (intentar con actor-critic)
+* probar cambiando la estructura de la red neuronal Q (arquitectura, numero de capas, numero de neuronas, funciones de activacion en la capa ultima)
+* regresar el escenario de entrenamiento al sistema donde, los gus aleatoriamente producen un cambio en su posicion, y el drone debera seguirlos
+* reducir penalizacion por salirse del area
+* agregar que el agente ejecute el menor numero de movimientos
+* probar con otras rewards functinos
+
+#---------------------------------------------------- PRUEBA FECHA : 29/10/2023 ENTRENAMIENTO SISTEMA USANDO TF-GENTS------------------------------------------------------------------------ #####
+MODELO 1 v4. rewardfunction3, weight_dr = 1.0, flying_ouside_penalization = 0.5, 3 layer = (50,28,12)
+* algo extraño sucede. entrenar el modelo hace que se estanque es 3 decisiones, avanzar retroceder o quedarse parado. 
+* probare cambiando al entorno donde los gus se mueven,
+* probare usando actor-critic
 
 
+#---------------------------------------------------- PRUEBA FECHA : 29/10/2023 ENTRENAMIENTO SISTEMA USANDO TF-AGENTS------------------------------------------------------------------------ #####
+MODELO 1 v3. rewardfunction3, weight_dr = 1.0, flying_ouside_penalization = 0.5, hidden_layer = (128,56,12)
+
+Desde este entrenamiento corregi un detalle que tenia el main loop global. Cuando el sistema llegaba a un estado terminal , se guardaba
+la trajectoria como final, pero el objeto py_driver no reseteaba el ambiente.
+Ademas, note que el main loop de entrenamiento, no recolectaba episodios completos de entrenamiento, sino solamente steps.
+corregi todo esto y el agente ya no toma decisiones solamente de avanzar, retroceder y parar.
+* ra facilitar el entrenamiento, controlare mas el tamaño del cambio de distancia que pueden tener los gus, asi como que mantenan el data rate
+por casi todo el episodio de training.
+
+* El ssitema parece haber aprendido a quedarse parado cuando esten cercanos de el los gus, ademas de buscar al gu con mayor data rate. 
+sin embargo, parece ser incapaz de quedarse con el por el resto del episodio.
+* parece ser que el problema esque no converge el sistema.

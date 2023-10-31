@@ -57,7 +57,7 @@ class GroundUser:
                 if np.abs(self.transmission_rate[i]) < 0.001: #gu no ha empezado a transmitir ninguna data
                     self.transmission_rate[i] = misc.randomChoice(g_x) 
                 else: #data esta siendo transmitida, agregaremos o decremetnaremos valor por un step
-                    if np.where(misc.gaussianChoice(1.0,0.32,0.15) < 0.5,False,True): #actualizaremos data rate
+                    if np.where(misc.gaussianChoice(1.0,0.32,0.15) < 0.8,False,True): #actualizaremos data rate
                         temp_rate = self.transmission_rate[i] + np.where(misc.moveObjNextStep(),1,-1) * self.step_gu_data
                         if not(temp_rate > self.max_gu_data or temp_rate < 0.0):
                             self.transmission_rate[i] = temp_rate

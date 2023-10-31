@@ -11,6 +11,30 @@ import shutil
 import zipfile
 from tf_agents.trajectories import trajectory
 
+import tensorflow as tf
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential,load_model,model_from_json
+from tensorflow.keras.optimizers import RMSprop,Adam
+from tensorflow import gather_nd
+from tensorflow.keras.losses import mean_squared_error
+import keras
+
+#create neural network
+def createNetwork(state_dimension,hid_lay_neurons,action_dimmension,output_layer_activation_function = None, loss_input_function = None,compiler_metrics = None):
+        """
+        esta funcion permitira crear la estructura de las redes DNN para este agente DQN
+        """
+        hidden_layers_num = len(hid_lay_neurons)
+        model=Sequential()
+        model.add(Dense(hid_lay_neurons[0],input_dim = state_dimension,activation='relu'))         
+        for neurons_num in range(1,hidden_layers_num):
+          model.add(Dense(hid_lay_neurons[neurons_num],activation='relu'))
+        model.add(Dense(action_dimmension,activation=output_layer_activation_function))
+        # compile the network with the custom loss defined in my_loss_fn
+        if loss_input_function:
+          model.compile(optimizer = Adam(), loss = loss_input_function, metrics = compiler_metrics)
+        return model
+
 def embed_mp4(filename):
   """Embeds an mp4 file in the notebook."""
   video = open(filename,'rb').read()

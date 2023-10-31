@@ -22,7 +22,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
     esta superclase extendiende la funcionalidad del robotarium para poder trabajar con un ambiente integrado con GUs,
     así como sus respectivas clases
     """
-    def __init__(self,boundaries, initial_conditions,state_dimension, action_space,gamma,timeslot_train_iter_max, show_figure=True, sim_in_real_time=True,**kwargs):
+    def __init__(self,boundaries, initial_conditions,state_dimension, action_space,gamma,obj_process_mob_trans_gu, show_figure=True, sim_in_real_time=True,**kwargs):
         super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
         self.action_space = action_space
         self.state_dimension = state_dimension
@@ -33,12 +33,14 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
         self.gamma = gamma
 
         self.counter_train_timeslot = 0
-        self.timeslot_train_iter_max = timeslot_train_iter_max
         
         self.kwargs_step_env = kwargs
 
+        #proceso para controlar el movimiento de los gus en ambiente
+        self.obj_process_mob_trans_gu = obj_process_mob_trans_gu
 
-
+        #esta variable permitira reiniciar episodio
+        self._episode_ended = False
 
     #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
 
@@ -50,10 +52,12 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
     
 
     def _step(self,index_action):
-        
-        self.counter_train_timeslot += 1
-        
-        #extraemos la accion del esapcio de acciones
+        if self._episode_ended:
+            # The last action ended the episode. Ignore the current action and start
+            # a new episode.
+            return self.reset()
+                
+        #extraemos la accion del espacio de acciones
         action = self.action_space[index_action]
         #print(f"action : {action}, index  : {index_action}")
 
@@ -62,15 +66,22 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
         next_state,reward,_ = self.stepEnv(action,at_pose,self.kwargs_step_env["PositionController"],
         self.kwargs_step_env["RewardFunc"],self.kwargs_step_env["WeightDataRate"],self.kwargs_step_env["WeightRelDist"],self.kwargs_step_env["PenalDroneOutRange"])
 
-        if self.counter_train_timeslot == self.timeslot_train_iter_max:
-            
-            #print("terminate state...")
-            #print(f"number of timeslots performed : {self.counter_train_timeslot}")
-            self.counter_train_timeslot = 0
-            #print(ts.termination(next_state, reward))
+        # ejecutamos acciones de los gus
+        self.obj_process_mob_trans_gu.guProcess(self,self.kwargs_step_env["PositionController"],at_pose,False)
+
+        #actualizamos los registros del drone...
+        self.obj_drones.echoRadio(self.obj_gus)   
+
+        #si el nuevo estado del ambiente es terminal, un gu se desplazo fuera de los limites, terminamos este episodio
+        drone_gu_pose = np.concatenate([self.obj_drones.poses,self.obj_gus.poses],axis = 1)
+        if self.isTerminalState(drone_gu_pose): #gu se desplazo fuera del area
+            #print(f"terminal state : {next_state}, reward  : {reward}")
+            self._episode_ended = True
             return ts.termination(next_state, reward)
-        #print(ts.transition(next_state, reward=reward, discount=1.0))
-        return ts.transition(next_state, reward=reward, discount=self.gamma)
+        else:
+            return ts.transition(next_state, reward=reward, discount=self.gamma)
+
+
 
     def _reset(self):
         #reseteamos el ambiente y visualizador utilizando la funcion previamente definida por mi
@@ -89,8 +100,10 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
         #get initial state
         current_state = self.getState()
+
+        #print(f"Initial state : {current_state}")
             
-        is_next_state_terminal = False
+        self._episode_ended = False
         #print(ts.restart(current_state))
         return ts.restart(current_state)
     
@@ -109,7 +122,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
 
     def stepEnv(self,action,pose_eval,unicycle_position_controller,reward_func,weight_dr,weight_dis,drone_boundaries_penalization,
-                bool_debug = False):
+                bool_debug = False,flag_out_of_bounds = True):
         """
         esta funcion ejecutara la accion previamente seleccionada, es decir movera al drone a la accion deseada.
         retornaremos reward, nuevo estado, si es terminal.
@@ -124,7 +137,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
             print("Drones current possible position: {}".format(self.obj_drones.poses[:2,0]))
             print("is terminal state ?: {}".format(terminal_state))
 
-        if terminal_state:
+        if terminal_state and flag_out_of_bounds: #si siguiente estado es terminal y permitiremos acciones fuera del espacio del ambiente, la ejecutamos
             #keep drone current position
             flag_drone_out_range = True
             drone_next_pos = self.obj_drones.poses[:2,0]
@@ -206,38 +219,19 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
         #--------------------------------------------------
 
-        #randomly select a distribution, based
-        next_reset_distribution = [misc.gaussianChoice(1.0,0.35,0.15),
-        misc.gaussianChoice(1.0)]
-        p_distribution = [0.45,0.55]
-        next_reset_env = np.random.choice(next_reset_distribution,p=p_distribution)
+        #random position gus inside drone rc...
+        for i in range(self.obj_gus.poses.shape[1]):
+            
+            next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
+            possible_next_pos_gu,_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
+            possible_next_pos_gu = possible_next_pos_gu.reshape(-1,1)               
 
-        bool_random_gus = np.where(next_reset_env < 0.9,True,False)
-   
-
-        if bool_random_gus:
-            #place gus randomly in environment
-            for i in range(self.obj_gus.poses.shape[1]):
-                self.obj_gus.poses[0,i] = np.random.random() * self.boundaries[2]
-                self.obj_gus.poses[1,i] = np.random.random() *  self.boundaries[3]
-        else:
-            #random position gus inside drone rc...
-            for i in range(self.obj_gus.poses.shape[1]):
-                #next_pos_gus_inside_rc = misc.gaussianChoice(1.0,0.31,0.15) < 0.5,True,False)
-                #if next_pos_gus_inside_rc: #gu next position inside rc...
-                next_pos_gus_mag = misc.gaussianChoice(self.obj_drones.rc,0.25)                
-                #else: #gu next position outside rc...
-                #    next_pos_gus_mag = self.obj_drones.rc * factor_gu_out_rc
-                #self.obj_gus.poses[:2,i],_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
-                possible_next_pos_gu,_ = misc.computeNextPosition(next_pos_gus_mag,self.obj_drones.poses[:2,0])
-                possible_next_pos_gu = possible_next_pos_gu.reshape(-1,1)               
-
-                terminal_state = self.isTerminalState(possible_next_pos_gu)
-                #si es estado terminal la posible nueva posicion. entonces procedemos a colocar los gus en la misma posicion del drone
-                if terminal_state:
-                    self.obj_gus.poses[:2,i] = self.obj_drones.poses[:2,0]
-                else:
-                    self.obj_gus.poses[:2,i] = possible_next_pos_gu[:,0]
+            terminal_state = self.isTerminalState(possible_next_pos_gu)
+            #si es estado terminal la posible nueva posicion. entonces procedemos a colocar los gus en la misma posicion del drone
+            if terminal_state:
+                self.obj_gus.poses[:2,i] = self.obj_drones.poses[:2,0]
+            else:
+                self.obj_gus.poses[:2,i] = possible_next_pos_gu[:,0]
 
             
                 

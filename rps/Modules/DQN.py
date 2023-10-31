@@ -34,7 +34,7 @@ from tensorflow.keras.losses import mean_squared_error
 from collections import namedtuple, deque
 import random
 import numpy as np
-
+from copy import deepcopy
 
 from rps.utilities.misc import *
 
@@ -45,6 +45,7 @@ import time
 from numpy_ringbuffer import RingBuffer
 from timeit import default_timer as timer
 from contextlib import contextmanager
+import rps.Modules.myenv_tf_agents as myenv_tf_agents
 
 Transition = namedtuple('Transition',
                         ('state', 'action','reward','next_state', "is_terminal"))
@@ -158,11 +159,14 @@ def plot_rewards(data):
 #-------------------------------- MODEL BACKUP FUNCTIONS ---------------------------------------------------------#
 
 class DQNAgent:
-    def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,
+    def __init__(self,state_dimension,action_space, mem_capacity,gamma,epsilon,num_episodes, batch_size,hid_lay_neurons,
+                 output_layer_activation_function,
                 timeslot_train_iter_max = 1000,pretrained_iter_saver = 500,target_network_update_interval = 300,model_full_path = ""):
 
         self.state_dimension = state_dimension
         self.action_space = action_space
+        self.hid_lay_neurons= hid_lay_neurons
+        self.output_layer_activation_function = output_layer_activation_function
         self.memoryBuffer = ReplayMemory(mem_capacity)
         self.counter_train_timeslot = 0 #este contador permitira salir del inner loop training, si el sistema no encuentra un 
         #estado terminal
@@ -187,14 +191,18 @@ class DQNAgent:
 
         #create q network NN model
         self.loss_function = self.my_loss_fn
+        self.metrics = ['accuracy']
 
-        self.q_network = self.createNetwork()
+        self.q_network = myenv_tf_agents.createNetwork(self.state_dimension,self.hid_lay_neurons,self.action_space.shape[0],self.output_layer_activation_function,
+        self.loss_function,self.metrics)   
+
         if model_full_path != "": #load pretrained model weights          
             self.load_keras_model(model_full_path)
 
 
         #create target network NN model
-        self.target_network = self.createNetwork()
+        self.target_network = myenv_tf_agents.createNetwork(self.state_dimension,self.hid_lay_neurons,self.action_space.shape[0],self.output_layer_activation_function,
+        self.loss_function,self.metrics)
         self.target_network.set_weights(self.q_network.get_weights())
 
 
@@ -242,9 +250,10 @@ class DQNAgent:
         esta funcion permitira crear la estructura de las redes DNN para este agente DQN
         """
         model=Sequential()
-        model.add(Dense(128,input_dim = self.state_dimension,activation='relu')) #añadir aqui state dimmension
-        model.add(Dense(56,activation='relu'))
-        model.add(Dense(self.action_space.shape[0],activation=None))
+        model.add(Dense(50,input_dim = self.state_dimension,activation='relu')) #añadir aqui state dimmension
+        model.add(Dense(28,activation='relu'))
+        model.add(Dense(12,activation='relu'))
+        model.add(Dense(self.action_space.shape[0],activation=keras.activations.linear))
         # compile the network with the custom loss defined in my_loss_fn
         model.compile(optimizer = Adam(), loss = self.loss_function, metrics = ['accuracy'])
         return model
