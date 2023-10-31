@@ -132,8 +132,8 @@ state_dimension = 6
 gamma =0.995
 
 #reward characteristics...
-weight_data_rate = 1.0
-weight_rel_dist = 0.025
+weight_data_rate = 3.0
+weight_rel_dist = 0.05
 penalize_drone_out_range = 0.5
 
 train_max_iter = 600
@@ -149,7 +149,7 @@ obj_process_mob_trans_gu.setStopProcess()
 train_py_robotarium = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,obj_process_mob_trans_gu,show_figure=show_figure,sim_in_real_time=True,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
-                            RewardFunc = myenv_tf_agents.rewardFunc3,
+                            RewardFunc = myenv_tf_agents.rewardFunc4,
                             WeightDataRate = weight_data_rate,
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range  )
@@ -157,7 +157,7 @@ train_py_robotarium = environment.environment(boundaries,initial_conditions,stat
 eval_py_robotarium = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,obj_process_mob_trans_gu,show_figure=show_figure,sim_in_real_time=True,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
-                            RewardFunc = myenv_tf_agents.rewardFunc3,
+                            RewardFunc = myenv_tf_agents.rewardFunc4,
                             WeightDataRate = weight_data_rate,
                             WeightRelDist = weight_rel_dist,
                             PenalDroneOutRange = penalize_drone_out_range  )
@@ -177,7 +177,7 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v6/"
+trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/31_10_2023/model 1 v8/"
 
 #model = load_model(trained_premodel_path + 'saved_model.pb',compile = False)
 
@@ -196,18 +196,18 @@ num_iterations = 100000 # @param {type:"integer"}
 
 initial_collect_steps = train_max_iter  # @param {type:"integer"}
 collect_steps_per_iteration =   1# @param {type:"integer"}
-replay_buffer_max_length = 150000  # @param {type:"integer"}
+replay_buffer_max_length = 250000  # @param {type:"integer"}
 n_step_update = 2
 
-batch_size = 3500  # @param {type:"integer"}
+batch_size = 3800  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
-log_interval = 2500  # @param {type:"integer"}
-training_interval = 100 #intervalos de episodios para ejecutar el entrenamiento
+log_interval = 10000  # @param {type:"integer"}
+training_interval = 150 #intervalos de episodios para ejecutar el entrenamiento
 
-num_eval_episodes = 50  # @param {type:"integer"}
-eval_interval = 2500  # @param {type:"integer"}
+num_eval_episodes = 100  # @param {type:"integer"}
+eval_interval = 10000  # @param {type:"integer"}
 
-bool_first_training_model = False #primera vez que entenaremos este modelo
+bool_first_training_model = True #primera vez que entenaremos este modelo
 
 # fully connected layer architecture
 fc_layer_params = (128,56,12 )
@@ -316,11 +316,6 @@ train_checkpointer = common.Checkpointer(
 train_checkpointer.initialize_or_restore()
 global_step = tf.compat.v1.train.get_global_step()
 
-#create keras neural network
-q_network_keras  = myenv_tf_agents.createNetwork(state_dimension,fc_layer_params,cartesian_action.shape[0],output_layer_activation_function)
-
-#save tf weights into keras model
-myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v6_weights.keras")
       
 #print(f"tf network weights after loading checkpoint : {agent._q_network.get_weights()}")
 
@@ -389,7 +384,7 @@ for i in range(1,num_iterations + 1):
 q_network_keras  = myenv_tf_agents.createNetwork(state_dimension,fc_layer_params,cartesian_action.shape[0],output_layer_activation_function)
 
 #save tf weights into keras model
-myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v7_weights.keras")
+myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v8_weights.keras")
 
 #---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
 

@@ -22,7 +22,8 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
     esta superclase extendiende la funcionalidad del robotarium para poder trabajar con un ambiente integrado con GUs,
     así como sus respectivas clases
     """
-    def __init__(self,boundaries, initial_conditions,state_dimension, action_space,gamma,obj_process_mob_trans_gu, show_figure=True, sim_in_real_time=True,**kwargs):
+    def __init__(self,boundaries, initial_conditions,state_dimension, action_space,gamma,obj_process_mob_trans_gu, show_figure=True, sim_in_real_time=True,
+        flag_out_of_bounds = True,**kwargs):
         super().__init__(boundaries,initial_conditions,show_figure, sim_in_real_time,**kwargs)
         self.action_space = action_space
         self.state_dimension = state_dimension
@@ -41,6 +42,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
         #esta variable permitira reiniciar episodio
         self._episode_ended = False
+        self.flag_out_of_bounds = flag_out_of_bounds
 
     #######-------------------------------------------------------------- TF - AGENTS FUNCTIONS -------------------------------------------------- #######
 
@@ -122,7 +124,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
 
 
     def stepEnv(self,action,pose_eval,unicycle_position_controller,reward_func,weight_dr,weight_dis,drone_boundaries_penalization,
-                bool_debug = False,flag_out_of_bounds = True):
+                bool_debug = False):
         """
         esta funcion ejecutara la accion previamente seleccionada, es decir movera al drone a la accion deseada.
         retornaremos reward, nuevo estado, si es terminal.
@@ -137,7 +139,7 @@ class environment(robotarium.Robotarium,py_environment.PyEnvironment):
             print("Drones current possible position: {}".format(self.obj_drones.poses[:2,0]))
             print("is terminal state ?: {}".format(terminal_state))
 
-        if terminal_state and flag_out_of_bounds: #si siguiente estado es terminal y permitiremos acciones fuera del espacio del ambiente, la ejecutamos
+        if terminal_state and self.flag_out_of_bounds: #si siguiente estado es terminal y permitiremos acciones fuera del espacio del ambiente, la ejecutamos
             #keep drone current position
             flag_drone_out_range = True
             drone_next_pos = self.obj_drones.poses[:2,0]

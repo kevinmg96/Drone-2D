@@ -49,7 +49,7 @@ class ProcesGuMobility:
             #indicate if gu needs updating position.
             for i in range(num_gus):
                 #get next magnitude displacement probability distribution
-                next_disp_distribution = [misc.randomChoice(r.obj_gus.max_gu_dist),misc.gaussianChoice(1.0,0.25,0.15),
+                next_disp_distribution = [misc.randomChoice(r.obj_gus.max_gu_dist),misc.gaussianChoice(r.obj_gus.max_gu_dist,0.25,0.15),
                                         misc.gaussianChoice(r.obj_gus.max_gu_dist)]
                 p_distribution = [0.20,0.65,0.15]
                 next_dist_gu = np.random.choice(next_disp_distribution,p=p_distribution) 

@@ -155,6 +155,21 @@ def rewardFunc3(env,weight_dr,weight_dis):
         reward = weight_dr * sum_dr #+ weight_dis * sum_dis
         return reward
 
+def rewardFunc4(env,weight_dr,weight_dis):
+        conec_1 = float(env.obj_drones.dict_gu[0]["Gu_0"]["Connection"])
+        conec_2 = float(env.obj_drones.dict_gu[0]["Gu_1"]["Connection"])
+        dis_1 = env.obj_drones.dict_gu[0]["Gu_0"]["DistanceToDrone"]
+        dis_2 = env.obj_drones.dict_gu[0]["Gu_1"]["DistanceToDrone"]
+        trans_rate_tot = env.obj_gus.transmission_rate[0] + env.obj_gus.transmission_rate[1] + 1e-6
+
+        sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
+                            trans_rate_tot)
+
+        sum_dis = env.obj_drones.rc / (dis_1 + dis_2)
+
+        reward = weight_dr * sum_dr + weight_dis * sum_dis
+        return reward
+
 #-------------------------------------------------------- REWARD FUNCTIONS -------------------------------------- ################################################3
 
 

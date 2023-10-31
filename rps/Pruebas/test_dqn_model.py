@@ -162,6 +162,7 @@ obj_process_mob_trans_gu = gu_process.ProcesGuMobility()
 obj_process_mob_trans_gu.setStopProcess()
 
 r = environment.environment(boundaries,initial_conditions,state_dimension,cartesian_action,gamma,obj_process_mob_trans_gu,show_figure=show_figure,sim_in_real_time=True,
+                            flag_out_of_bounds=False,
     Rc = rc, FaceColor = rc_color,PoseGu = arr_gu_pose,GuRadius = graph_rad,GuColorList = list_color_gus,
        PlotDataRate = True, MaxGuDist = max_gu_dist, MaxGuData = max_gu_data, StepGuData = step_gu_data,PositionController = unicycle_position_controller,
                             RewardFunc = myenv_tf_agents.rewardFunc3,
@@ -199,7 +200,7 @@ batch_size = 500
 
 save_interval_premodel = 2000
 
-hid_layer_neurons = (128,56,12 )
+hid_layer_neurons = (128,56,12)
 output_layer_activation_function = keras.activations.linear
 dqn_agent = DQN.DQNAgent(state_dimension,cartesian_action,4000,gamma,prob_epsilon,num_episodes,batch_size,hid_layer_neurons,output_layer_activation_function,
                          train_max_iter,save_interval_premodel,None,pretrained_model_path + pretrained_model_filename)
