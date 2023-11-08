@@ -133,8 +133,8 @@ gamma =0.995
 
 #reward characteristics...
 weight_data_rate = 3.0
-weight_rel_dist = 0.05
-penalize_drone_out_range = 0.5
+weight_rel_dist = 0.09
+penalize_drone_out_range = 1.0
 
 train_max_iter = 600
 #----------------------------------------------DQN agent characteristics ----------------------------------------------------------#
@@ -177,7 +177,7 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/31_10_2023/model 1 v8/"
+trained_premodel_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/02_11_2023/model 1 v1/"
 
 #model = load_model(trained_premodel_path + 'saved_model.pb',compile = False)
 
@@ -192,20 +192,20 @@ if  not bool_use_gpu:
 
 
 # Rest of Hyperparameters
-num_iterations = 100000 # @param {type:"integer"}
+num_iterations = 1000000 # @param {type:"integer"}
 
 initial_collect_steps = train_max_iter  # @param {type:"integer"}
 collect_steps_per_iteration =   1# @param {type:"integer"}
-replay_buffer_max_length = 250000  # @param {type:"integer"}
+replay_buffer_max_length = 500000  # @param {type:"integer"}
 n_step_update = 2
 
-batch_size = 3800  # @param {type:"integer"}
+batch_size = 5000  # @param {type:"integer"}
 learning_rate = 1e-3  # @param {type:"number"}
-log_interval = 10000  # @param {type:"integer"}
-training_interval = 150 #intervalos de episodios para ejecutar el entrenamiento
+log_interval = 4500  # @param {type:"integer"}
+training_interval = 50 #intervalos de episodios para ejecutar el entrenamiento
 
 num_eval_episodes = 100  # @param {type:"integer"}
-eval_interval = 10000  # @param {type:"integer"}
+eval_interval = 15000  # @param {type:"integer"}
 
 bool_first_training_model = True #primera vez que entenaremos este modelo
 
@@ -380,11 +380,17 @@ for i in range(1,num_iterations + 1):
         print('step = {0}: Average Return = {1}'.format(i, avg_return))
         returns.append(avg_return)
 
+#save model using checkpointer
+
+train_checkpointer.save(global_step)
+
 #create keras neural network
 q_network_keras  = myenv_tf_agents.createNetwork(state_dimension,fc_layer_params,cartesian_action.shape[0],output_layer_activation_function)
 
 #save tf weights into keras model
-myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v8_weights.keras")
+myenv_tf_agents.save_tf_weights_to_keras_model_weights(agent._policy.variables(),q_network_keras,trained_premodel_path + "model_1_v1_weights_1.keras")
+
+
 
 #---------------------------------------------------------- TRAINING AGENT -------------------------------------------------------------- #########
 
@@ -395,15 +401,10 @@ steps = range(1, num_iterations + 1, eval_interval)
 plt.plot(steps, returns)
 plt.ylabel('Average Return')
 plt.xlabel('Step')
-plt.savefig(trained_premodel_path + "model_1_v7--1.png")
+plt.savefig(trained_premodel_path + "model_1_v1--1.png")
 plt.show()
 
 # ------------------------------------------------------------ VISUALIZATION ------------------------------------------------------------ ######
-
-#save model using checkpointer
-
-train_checkpointer.save(global_step)
-
 
 
 

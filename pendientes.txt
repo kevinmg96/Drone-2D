@@ -69,15 +69,40 @@ MODELO 1 v4. rewardfunction3, weight_dr = 1.0, flying_ouside_penalization = 0.5,
 
 
 #---------------------------------------------------- PRUEBA FECHA : 29/10/2023 ENTRENAMIENTO SISTEMA USANDO TF-AGENTS------------------------------------------------------------------------ #####
-MODELO 1 v3. rewardfunction3, weight_dr = 1.0, flying_ouside_penalization = 0.5, hidden_layer = (128,56,12)
+MODELO 1 v7. rewardfunction3, weight_dr = 1.0, flying_ouside_penalization = 0.5, hidden_layer = (128,56,12)
 
 Desde este entrenamiento corregi un detalle que tenia el main loop global. Cuando el sistema llegaba a un estado terminal , se guardaba
 la trajectoria como final, pero el objeto py_driver no reseteaba el ambiente.
 Ademas, note que el main loop de entrenamiento, no recolectaba episodios completos de entrenamiento, sino solamente steps.
 corregi todo esto y el agente ya no toma decisiones solamente de avanzar, retroceder y parar.
-* ra facilitar el entrenamiento, controlare mas el tamaño del cambio de distancia que pueden tener los gus, asi como que mantenan el data rate
+* pa facilitar el entrenamiento, controlare mas el tamaño del cambio de distancia que pueden tener los gus, asi como que mantenan el data rate
 por casi todo el episodio de training.
 
 * El ssitema parece haber aprendido a quedarse parado cuando esten cercanos de el los gus, ademas de buscar al gu con mayor data rate. 
 sin embargo, parece ser incapaz de quedarse con el por el resto del episodio.
 * parece ser que el problema esque no converge el sistema.
+* durante testing, apague la modalidad donde el drone no puede volar fuera del area. descubri que aun le falta aprender a no salirse fuera del area.
+* corregi un bug que generaba que el gu tomara desplazamientos drasticos. note que el drone es capaz de seguir al gu que require mayor transmision. sin embargo,
+despues de varios intervalos deja de seguirlo. suposicion: le falta mayor episodios de entrenamiento.
+
+#---------------------------------------------------- PRUEBA FECHA : 31/0/2023 ENTRENAMIENTO SISTEMA USANDO TF-AGENTS------------------------------------------------------------------------ #####
+MODELO 1 v8. rewardfunction4, weight_dr = 3.0,weight dist 0.05,penalization = 0.5, hidden_layer = (128,56,12)
+
+* en algunas observaciones el drone fue incapaz de seguir a los gus. Sin embargo, fue capaz de reincorporarse con alguna despues de ciertas iteraciones.
+tambien lo vi siendo incapaz de regresar con algun gu.
+* normalmente, si si sigue a algun gu. escoge al que tenga mayor data rate. y si su data rate de ambos se encuentran masomenos en los mismos rangos, trata de
+darle servicio a ambos. tambien observe capaz de cambiar entre darle servicio al de menor data rate al de mayor data rate
+* en general, en ocasiones se ve que tiene cierta capacidad de resolver el problema de maximizar data rate. en otras ocasiones se ve que no es capaz.
+creo que se debe a una falta de entrenamientos.
+
+----------------
+Estoy entrenando el sistema single agent- mobility gus con 500k episodios. si no se llega a una buena policiy. procedere a intentar el sistema single-agent-fixed gus
+donde basado en una distribucion de probabilidad, colocara a estos ya sea juntos en un rango de separacion Rc, o completamente aleatorio
+
+#---------------------------------------------------- PRUEBA FECHA : 31/0/2023 ENTRENAMIENTO SISTEMA USANDO TF-AGENTS------------------------------------------------------------------------ #####
+MODELO 1 v9. rewardfunction4, weight_dr = 3.0,weight dist 0.07,penalization = 1.0, hidden_layer = (128,56,12)
+
+*al principio, cuando los gus estan en el rango rc del drone, parece ser que esta tratando de encontrar una buena posicion para darle servicio a ambos
+sin embargo, a medida que estos se van separando mas, el drone no es capaz de seguir la trayectoria de alguna por mucho tiempo. este se separa
+y no vuelve a reincorporarse. 
+teoria: le faltan mas episodios de entrenamiento donde estos se separen y mas episodios donde el drone salga de su area de trabajo.

@@ -187,8 +187,8 @@ working_directory = ["Users/CIMB-WST/Documents/Kevin Javier Medina Gómez/Tesis/
 "Users/kevin/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D",
 "Users/opc/OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey/MCC/Tesis/Project Drone 2D/Drone-2D"]
 
-pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/29_10_2023/model 1 v6/"
-pretrained_model_filename = "model_1_v6_weights.keras"
+pretrained_model_path = working_path + working_directory[0] + "/rps/NN_models/Trained/DQN single agent-multi objective/31_10_2023/model 1 v9/"
+pretrained_model_filename = "model_1_v9_weights_5.keras"
 
 
 #data = DQN.load_info_data(pretrained_model_path + "model_1_v2_data.txt")

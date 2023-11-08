@@ -18,6 +18,7 @@ from tensorflow.keras.optimizers import RMSprop,Adam
 from tensorflow import gather_nd
 from tensorflow.keras.losses import mean_squared_error
 import keras
+import numpy as np
 
 #create neural network
 def createNetwork(state_dimension,hid_lay_neurons,action_dimmension,output_layer_activation_function = None, loss_input_function = None,compiler_metrics = None):
@@ -165,7 +166,7 @@ def rewardFunc4(env,weight_dr,weight_dis):
         sum_dr = conec_1 * (env.obj_gus.transmission_rate[0]/trans_rate_tot) + conec_2 *(env.obj_gus.transmission_rate[1]/
                             trans_rate_tot)
 
-        sum_dis = env.obj_drones.rc / (dis_1 + dis_2)
+        sum_dis = env.obj_drones.rc / (dis_1 + dis_2 + 0.001)
 
         reward = weight_dr * sum_dr + weight_dis * sum_dis
         return reward
